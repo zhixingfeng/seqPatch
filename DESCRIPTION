@@ -4,7 +4,7 @@ Title: Detect DNA modifications by SMRT sequencing data
 Version: 1.0
 Date: 2010-11-26
 Author: Zhixing Feng
-Maintainer:  Zhixing Feng <fzx08@mails.thu.edu.cn>
+Maintainer:  Zhixing Feng <zxfeng.thu@gmail.com>
 Description: This package implements a hierarchical model to detect DNA modifications by SMRT sequencing. This hierarchical model incorporate 
 	IPD (interpulse duration) of positions with the sequence context to improve detetion accuaracy.
 License: GPL
