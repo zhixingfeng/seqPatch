@@ -1,0 +1,82 @@
+detectModification <- function(genomeF.native, genomeF.ctrl, genomeSeq=NULL, context.effect=NULL, left.len=6, right.len=1,
+                 is.filter.sample=FALSE, is.trim.cvg = TRUE, is.trim.pos = TRUE, min.cvg=15, min.pos=10,  method='hieModel')
+{
+	### check method 
+	if (method!='hieModel' & method != 'CC')
+                stop('method should be \'hieModel\' or  \'CC\'')
+	
+
+	### check reference genome
+	if (!is.null(genomeSeq)){
+		if (names(genomeF.native$features$ipd_pos) != names(genomeSeq$pos) | names(genomeF.ctrl$features$ipd_pos) != names(genomeSeq$pos) | 
+			names(genomeF.native$features$ipd_neg) != names(genomeSeq$neg) | names(genomeF.ctrl$features$ipd_neg) != names(genomeSeq$neg))
+			stop('Wrong reference genome, check tag of the fasta file, i.e. string after \'>\'\n')
+	}
+	
+	# check where genomeSeq provide for hierarchical model 
+	if (method=='hieModel' & is.null(genomeSeq)){
+		stop('genomeSeq could not be NULL when method=\'hieModel\' ')
+	}
+	
+	### remove positions with low coverage in historical data
+        if (is.trim.cvg == TRUE & !is.null(context.effect)){
+                cat('remove low coverage position from context effect\n')
+                context.effect <- trim.context.effect(context.effect, min.cvg)
+        }
+
+        ### remove context with too few positions
+        if (is.trim.pos == TRUE & !is.null(context.effect)){
+                cat('remove context with too few positions\n')
+                len <- sapply(context.effect, length)
+                context.effect <- context.effect[len>=min.pos]
+        }
+	### filter data
+        if (is.filter.sample==TRUE){
+                cat("remove outliers \n")
+                for (i in 1:length(genomeF.native$features$ipd_pos))
+                        genomeF.native$features$ipd_pos[[i]] <- filter.outlier.byGenomeF(genomeF.native$features$ipd_pos[[i]])
+                for (i in 1:length(genomeF.native$features$ipd_neg))
+                        genomeF.native$features$ipd_neg[[i]] <- filter.outlier.byGenomeF(genomeF.native$features$ipd_neg[[i]])
+        	if (!is.null(genomeF.ctrl)){
+			for (i in 1:length(genomeF.ctrl$features$ipd_pos))
+                        	genomeF.ctrl$features$ipd_pos[[i]] <- filter.outlier.byGenomeF(genomeF.ctrl$features$ipd_pos[[i]])
+                	for (i in 1:length(genomeF.ctrl$features$ipd_neg))
+                        	genomeF.ctrl$features$ipd_neg[[i]] <- filter.outlier.byGenomeF(genomeF.ctrl$features$ipd_neg[[i]])
+        	}
+	}
+	
+	detection <- list()
+	if (method == 'CC'){	
+		cat('detect DNA modification by case-control method\n')
+		# generate a fake genomeSeq and context.effect to avoid change the C code
+		fake.genomeSeq <- list()
+		fake.genomeSeq$pos <- list()
+		for (i in 1:length(genomeF.native$genome.start.pos)){
+			len <- max(length(genomeF.native$feature$ipd_pos[[i]]) + genomeF.native$genome.start.pos[[i]]-1, 
+					length(genomeF.native$feature$ipd_neg[[i]]) + genomeF.native$genome.start.neg[[i]]-1)
+			fake.genomeSeq$pos[[i]] <- paste(rep('N',len),collapse='')
+		}
+		names(fake.genomeSeq$pos) <- names(genomeF.native$genome.start.pos)
+		fake.genomeSeq$neg <- fake.genomeSeq$pos
+
+		# OK, let me also make a fake context.effect 
+		fake.context.effect<-list()
+		fake.context <- paste(rep('N',left.len + right.len + 1), collapse = '')
+		fake.context.effect[[fake.context]] <- list();fake.context.effect[[fake.context]][[1]] <- 0
+		detection <- hieModelEB(genomeF.native, genomeF.ctrl, fake.genomeSeq, fake.context.effect, left.len, right.len, FALSE,
+					FALSE, FALSE, FALSE, min.cvg, min.pos, method, is.perm=FALSE )
+	}	
+	if (method == 'hieModel' & !is.null(context.effect)){
+		cat('detect DNA modification by hierarchical model (using historical data)\n')
+		detection <- hieModelEB(genomeF.native, genomeF.ctrl, genomeSeq, context.effect, left.len, right.len, FALSE,
+                                        FALSE, FALSE, FALSE, min.cvg, min.pos, method, is.perm=FALSE )
+	}
+	if (method == 'hieModel' & is.null(context.effect)){
+		cat('detect DNA modification by hierarchical model (no historical data)\n')
+		detection <- hieModelEB.NH(genomeF.native, genomeF.ctrl, genomeSeq, left.len, right.len,
+					FALSE, min.cvg, min.pos)
+	}
+
+	detection
+}
+
