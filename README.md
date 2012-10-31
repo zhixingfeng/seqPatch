@@ -16,7 +16,7 @@ seqPatch depends on Rcpp and pbh5. User need to install them first.
 Install Rcpp
 ============
 launch R console and type
-> install.packages('Rcpp', dependencies=TRUE)
+>install.packages('Rcpp', dependencies=TRUE)
 
 
 Install pbh5
