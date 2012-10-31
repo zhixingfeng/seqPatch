@@ -5,7 +5,11 @@ R package detecting DNA modifications by kinetic data of SMRT sequencing
 
 System requirement
 ==================
+<<<<<<< HEAD
 Linux system. >=32Gb RAM is highly recommanded.
+=======
+Linux system. >=32Gb RAM is highly recommanded
+>>>>>>> 35e592987acb94872d566b5e85525353bcb219a5
 
 
 Pre-requisition
@@ -24,8 +28,6 @@ see http://www.smrtcommunity.com/Share/Code?id=a1q70000000GrfbAAC&strRecordTypeN
 Install seqPatch
 ================
 R CMD INSTALL downloaded_folder_name
-
-
 
 
 
