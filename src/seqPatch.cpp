@@ -972,255 +972,33 @@ RcppExport SEXP buildControl_NC(SEXP RgenomeSeq, SEXP RgenomeSeqRef_pos, SEXP Rg
 				 Rcpp::Named("ref_data")=Rcpp::wrap(ref_data));	
 }
 
-RcppExport SEXP hieModel_denovo(SEXP Ripd_native, SEXP Rgenome_start_native, SEXP RgenomeSeq, SEXP RcontextEffect, SEXP RcontextEx,
-			SEXP Rcontext, SEXP Rstrand, SEXP Rleft_len, SEXP Rright_len)
-{
-	int genome_start_native = INTEGER(Rgenome_start_native)[0];
-        string genomeSeq = CHAR(STRING_ELT(RgenomeSeq,0));
-        int strand = INTEGER(Rstrand)[0];
-        int left_len =  INTEGER(Rleft_len)[0];
-        int right_len = INTEGER(Rright_len)[0];
-	
-	// load context effect
-       	Rprintf("load context effect\n");
-	map<string, vector<vector<double> > > contextEffect;
-        if (!Rf_isNull(RcontextEffect)){
-                for (int i=0;i<Rf_length(RcontextEffect);i++){
-                        string cur_context = CHAR(STRING_ELT(Rcontext,i));
-                        vector<vector<double> > ipd;
-                        for (int j=0;j<Rf_length(VECTOR_ELT(RcontextEffect,i)); j++) {vector<double> tmp; ipd.push_back(tmp);}
-                        for (int j=0;j<Rf_length(VECTOR_ELT(RcontextEffect,i)); j++){
-                                double * cur_ipd = REAL(VECTOR_ELT(VECTOR_ELT(RcontextEffect,i),j));
-                                int cur_cvg = Rf_length(VECTOR_ELT(VECTOR_ELT(RcontextEffect,i),j));
-                                for (int k=0; k<cur_cvg; k++ ){
-                                        ipd[j].push_back(cur_ipd[k]);
-                                }
-                        }
-                        contextEffect[cur_context] = ipd;
-                }
-        }
-
-	// load context extension
-	Rprintf("load context extension\n");
-	map<string, vector<string> > contextEx;
-        for (int i=0;i<Rf_length(RcontextEx);i++){
-                string cur_context = CHAR(STRING_ELT(Rcontext,i));
-                SEXP Rcur_Ex = VECTOR_ELT(RcontextEx,i);
-                for (int j=0;j<Rf_length(Rcur_Ex);j++){
-                        contextEx[cur_context].push_back(CHAR(STRING_ELT(Rcur_Ex,j)));
-                }
-        }
-	//Rprintf("start to detect %d\n",Rf_length(Ripd_native));
-	/*-----------------start to detect modifications----------------------*/	
-	vector<double> detection(Rf_length(Ripd_native), sqrt(-1));	
-	vector<double> ipd_ratio(Rf_length(Ripd_native), sqrt(-1));
-	vector<double> is_findContext(Rf_length(Ripd_native), sqrt(-1));	
-	
-	vector<double> mu0(Rf_length(Ripd_native), sqrt(-1));
-	vector<double> kappa0(Rf_length(Ripd_native), sqrt(-1));
-	vector<double> upsilon0(Rf_length(Ripd_native), sqrt(-1));
-	vector<double> sigma0(Rf_length(Ripd_native), sqrt(-1));
-
-	vector<double> mu_native_est(Rf_length(Ripd_native), sqrt(-1));
-	vector<double> sigma2_native_est(Rf_length(Ripd_native), sqrt(-1));
-	vector<double> sampleSize_native(Rf_length(Ripd_native), sqrt(-1));
-
-	vector<double> mu_ctrl_est(Rf_length(Ripd_native), sqrt(-1));
-        vector<double> sigma2_ctrl_est(Rf_length(Ripd_native), sqrt(-1));
-        vector<double> sampleSize_ctrl(Rf_length(Ripd_native), sqrt(-1));
-		
-	vector<double> max_idx_vec(Rf_length(Ripd_native), sqrt(-1));
-	vector<double> max_left_vec(Rf_length(Ripd_native), sqrt(-1));
-	vector<double> max_right_vec(Rf_length(Ripd_native), sqrt(-1));
-	vector<double> max_cvg_vec(Rf_length(Ripd_native), sqrt(-1));
-
-	vector<double> effect_size(Rf_length(Ripd_native), sqrt(-1));	
-	vector<double> effect_size_max(Rf_length(Ripd_native), sqrt(-1));
-	vector<double> effect_size_m(Rf_length(Ripd_native), sqrt(-1));
-
-        vector<double> mu_ctrl_max(Rf_length(Ripd_native), sqrt(-1));
-        vector<double> sigma2_ctrl_max(Rf_length(Ripd_native), sqrt(-1));
-	vector<double> sampleSize_ctrl_max(Rf_length(Ripd_native), sqrt(-1));
-	
-	vector<double> L_log_alt(Rf_length(Ripd_native), sqrt(-1));
-        vector<double> L_log_null(Rf_length(Ripd_native), sqrt(-1));
-        vector<double> LR_log(Rf_length(Ripd_native), sqrt(-1));
-
-	for (int i=0;i<Rf_length(Ripd_native);i++){
-		if ((i+1)%10000==0) Rprintf("detected %d positions\r", i+1);
-		// get ipd for test
-		double *ipd_native_tmp = REAL(VECTOR_ELT(Ripd_native,i));
-		vector<double> ipd_native(ipd_native_tmp, ipd_native_tmp + Rf_length(VECTOR_ELT(Ripd_native,i)) );
-		int cur_pos = i - genome_start_native + 1;
-		string cur_context;
-		string cur_context_ex;
-		if (strand == 0){
-			if (cur_pos - left_len<0 || cur_pos + right_len>Rf_length(Ripd_native)-1 || cur_pos + right_len > (int) genomeSeq.size()-1 || 
-				cur_pos - 30<0 || cur_pos + 10>Rf_length(Ripd_native)-1 || cur_pos + 10 > (int) genomeSeq.size()-1)
-				continue;
-			cur_context = genomeSeq.substr(cur_pos - left_len , right_len + left_len + 1);
-			cur_context_ex = genomeSeq.substr(cur_pos - 30 , 41);		
-		}else{
-			if (cur_pos - right_len<0 || cur_pos + left_len>Rf_length(Ripd_native)-1 || cur_pos + left_len > (int) genomeSeq.size()-1 ||
-				cur_pos - 10<0 || cur_pos + 30>Rf_length(Ripd_native)-1 || cur_pos + 30 > (int) genomeSeq.size()-1 )
-                                continue;
-			cur_context = SP_reverseSeq (genomeSeq.substr(cur_pos - right_len, right_len + left_len + 1) ) ;
-			cur_context_ex = SP_reverseSeq(genomeSeq.substr(cur_pos - 10 , 41));
-		}
-		
-		if (ipd_native.size()<3){
-                        sampleSize_native[i] = ipd_native.size();
-                        continue;
-                }
-
-		map<string, vector<vector<double> > >::iterator it = contextEffect.find(cur_context);
-               	map<string, vector<string> >::iterator it_ex = contextEx.find(cur_context);
-		if (it==contextEffect.end()&& it_ex!=contextEx.end() || it!=contextEffect.end()&& it_ex==contextEx.end()){
-			Rprintf("fatal error: context.effect and context.ex don't match.\n");
-			return R_NilValue;
-		}
-		if (it!=contextEffect.end())
-			is_findContext[i] = 1;
-		else
-			is_findContext[i] = 0;
-		
-		double mu_native = sqrt(-1);
-		double sigma_native = sqrt(-1);
-		double n_native = sqrt(-1);
-
-		double mu_ctrl = sqrt(-1);
-                double sigma_ctrl = sqrt(-1);
-                double n_ctrl = sqrt(-1);
-
-		if (it!=contextEffect.end()){
-			vector<vector<double> > ipd_ref = it->second;	
-			vector<string>  ex_ref = it_ex->second;	
-			vector<int> max_idx_all = findMaxContextIndex(cur_context_ex, ex_ref, ipd_ref);
-			int max_idx = max_idx_all[0];	
-			
-			// fit hierarchical model
-			map<string, vector<double> > hie_fit = hieModelEB_alt(ipd_ref,ipd_native);
-			
-			mu_native = mean(ipd_native);
-			sigma_native = var(ipd_native);
-			n_native = ipd_native.size();
-
-			mu_ctrl = hie_fit["mu"][max_idx];
-			sigma_ctrl = hie_fit["sigma"][max_idx] * hie_fit["upsilon"][max_idx]/(hie_fit["upsilon"][max_idx]-2);
-			n_ctrl = (int)ipd_ref[max_idx].size();	
-			
-			detection[i] = get_t_stat(mu_native, sigma_native, n_native, mu_ctrl, sigma_ctrl, n_ctrl + hie_fit["hyperPara"][1]);
-				
-			mu0[i] = hie_fit["hyperPara"][0];
-			kappa0[i] = hie_fit["hyperPara"][1];
-			upsilon0[i] = hie_fit["hyperPara"][2];
-			sigma0[i] = hie_fit["hyperPara"][3];
-				
-			max_idx_vec[i] = max_idx_all[0];
-			max_left_vec[i] = max_idx_all[1];
-			max_right_vec[i] = max_idx_all[2];
-			max_cvg_vec[i] = max_idx_all[3];
-			
-			// get effect size for largest homologous positions
-                        mu_ctrl_max[i] = mean(ipd_ref[max_idx]);
-                        sigma2_ctrl_max[i] = var(ipd_ref[max_idx]);
-                        sampleSize_ctrl_max[i] = ipd_ref[max_idx].size();
-                        effect_size_max[i] = (mu_native - mu_ctrl_max[i])/ sqrt(sigma_native + sigma2_ctrl_max[i]);
-
-			effect_size_m[i] = (mu_native - mu_ctrl)/sqrt(sigma_native/n_native + sigma_ctrl/n_ctrl);
-			
-			// likihood ratio test 	
-			double cur_L_log_alt = getLogLikelihood_marginal(ipd_ref,hie_fit["hyperPara"][0],hie_fit["hyperPara"][1]
-                        			,hie_fit["hyperPara"][2], hie_fit["hyperPara"][3] );
-			cur_L_log_alt += lgamma((upsilon0[i] + n_native)/2) + upsilon0[i]*log(upsilon0[i]*sigma0[i])/2 -
-					lgamma(upsilon0[i]/2) - (upsilon0[i]+n_native)*log( (n_native-1)*sigma_native + upsilon0[i]*sigma0[i] )/2	
-					-n_native*log(my_pi)/2;
-					   	
-                        for (int k=0;k<(int)ipd_native.size();k++) ipd_ref[max_idx].push_back(ipd_native[k]);
-			map<string, vector<double> > hie_fit_null = hieModelEB(ipd_ref);
-                        double cur_L_log_null = getLogLikelihood_marginal(ipd_ref,hie_fit_null["hyperPara"][0],hie_fit_null["hyperPara"][1]
-                                                ,hie_fit_null["hyperPara"][2], hie_fit_null["hyperPara"][3] );
-                        //cur_L_log_alt += sum(ldnorm(ipd_native, mean(ipd_native), hie_fit_null["sigma"][max_idx]));
-                        //double sigma_native_null = (upsilon0[i]*sigma0[i] + (n_native-1)*sigma_native +
-                        //                        kappa0[i]*n_native*(mu_native-mu0[i])*(mu_native-mu0[i])/(kappa0[i]+n_native))
-                        //                         / (upsilon0[i] + n_native - 2);
-			//double sigma_native_null = (upsilon0[i]*sigma0[i] + (n_native-1)*sigma_native)/ (upsilon0[i] + n_native - 2);
-			//cur_L_log_alt += sum(ldnorm(ipd_native, mu_native, sigma_native_null));
-			
-			L_log_null[i] = cur_L_log_null;
-                        L_log_alt[i] = cur_L_log_alt;
-                        LR_log[i] = cur_L_log_alt - cur_L_log_null;
-		
-			/*double mu_native_null = (kappa0[i]*mu0[i] + n_native*mu_native)/(kappa0[i] + n_native);
-			double sigma_native_null = (upsilon0[i]*sigma0[i] + (n_native-1)*sigma_native +
-                      				kappa0[i]*n_native*(mu_native-mu0[i])*(mu_native-mu0[i])/(kappa0[i]+n_native))
-						 / (upsilon0[i] + n_native - 2);
-			double cur_L_log_alt = getLogLikelihood_marginal(ipd_ref,hie_fit["hyperPara"][0],hie_fit["hyperPara"][1]
-                                                ,hie_fit["hyperPara"][2], hie_fit["hyperPara"][3] ) 
-						+ sum(ldnorm(ipd_native, mu_native, sigma_native_null));
-			for (int j=0;j<(int)ipd_native.size();j++) ipd_ref[max_idx].push_back(ipd_native[j]);		
-			double cur_L_log_null = getLogLikelihood_marginal(ipd_ref,hie_fit["hyperPara"][0],hie_fit["hyperPara"][1]
-                                                ,hie_fit["hyperPara"][2], hie_fit["hyperPara"][3] );	
-			L_log_null[i] = cur_L_log_null;
-                        L_log_alt[i] = cur_L_log_alt;
-                        LR_log[i] = cur_L_log_alt - cur_L_log_null;*/
-
-		}
-		
-		mu_native_est[i] = mu_native;
-		sigma2_native_est[i] = sigma_native;
-		sampleSize_native[i] = n_native;
-		
-		mu_ctrl_est[i] = mu_ctrl;
-                sigma2_ctrl_est[i] = sigma_ctrl;
-                sampleSize_ctrl[i] = n_ctrl;
-	
-		effect_size[i] = (mu_native-mu_ctrl)/sqrt(sigma_native+sigma_ctrl);	
-	}
-	Rprintf("detected %d positions\n", Rf_length(Ripd_native));
-	// load results
-	map<string, vector<double> > result;	
-	result["t_stat"] = detection;
-	result["ipd_ratio"] = ipd_ratio; 
-	result["is_findContext"] = is_findContext;
-	
-	result["theta"] = mu0;
-	result["kappa"] = kappa0;
-	result["upsilon"] = upsilon0;
-	result["tau2"] = sigma0;
-
-	result["mu_native"] = mu_native_est;
-	result["sigma2_native"] = sigma2_native_est;
-	result["sampleSize_native"] = sampleSize_native;
-
-	result["mu_ctrl"] = mu_ctrl_est;
-        result["sigma2_ctrl"] = sigma2_ctrl_est;
-        result["sampleSize_ctrl"] = sampleSize_ctrl;
-
-	result["max_idx"] = max_idx_vec;
-	result["max_left"] = max_left_vec;
-	result["max_right"] = max_right_vec;
-	result["max_cvg"] = max_cvg_vec;
-
-	result["effect.size"] = effect_size;
-	result["effect.size.m"] = effect_size_m;
-	result["mu_ctrl_max"] = mu_ctrl_max;
-	result["sigma2_ctrl_max"] = sigma2_ctrl_max;
-	result["sampleSize_ctrl_max"] = sampleSize_ctrl_max;
-	result["effect_size_max"] = effect_size_max;
-
-	result["L_log_alt"] = L_log_alt;
-	result["L_log_null"] = L_log_null;
-	result["LR_log"] = LR_log;	
-	SEXP rl = Rcpp::wrap(result);
-	return rl;	
-
-}
 RcppExport SEXP hieModel_NC (SEXP Ripd_native, SEXP Rgenome_start_native, SEXP RgenomeSeq,  SEXP RcontextEffect,
 			 SEXP Rcontext, SEXP Rstrand, SEXP Rleft_len, SEXP Rright_len, SEXP Rmethod, SEXP Ris_cvg_all)
 {
 	// load context effect
-	map<string, vector<vector<double> > > contextEffect;
+	map<string, map<string, vector<double> > > contextEffect;
+        if (!Rf_isNull(RcontextEffect)){
+                for (int i=0;i<Rf_length(RcontextEffect);i++){
+                        string cur_context = CHAR(STRING_ELT(Rcontext,i));
+                        map<string, vector<double > > cur_data;
+                        vector<double> tmp;
+                        cur_data["mean"] = tmp; cur_data["var"] = tmp; cur_data["len"] = tmp;
+                        SEXP cur_Rdata = VECTOR_ELT(RcontextEffect,i);
+                        double *dat;
+                        // get mean
+                        dat = REAL(VECTOR_ELT(cur_Rdata,0));
+                        for (int j=0;j<Rf_length(VECTOR_ELT(cur_Rdata,0)); j++){cur_data["mean"].push_back(dat[j]);}
+                        // get var
+                        dat = REAL(VECTOR_ELT(cur_Rdata,1));
+                        for (int j=0;j<Rf_length(VECTOR_ELT(cur_Rdata,1)); j++){cur_data["var"].push_back(dat[j]);}
+                        // get len
+                        dat = REAL(VECTOR_ELT(cur_Rdata,2));
+                        for (int j=0;j<Rf_length(VECTOR_ELT(cur_Rdata,2)); j++){cur_data["len"].push_back(dat[j]);}
+                        contextEffect[cur_context] = cur_data;
+                }
+        }
+
+	/*map<string, vector<vector<double> > > contextEffect;
         if (!Rf_isNull(RcontextEffect)){
                 for (int i=0;i<Rf_length(RcontextEffect);i++){
                         string cur_context = CHAR(STRING_ELT(Rcontext,i));
@@ -1235,7 +1013,8 @@ RcppExport SEXP hieModel_NC (SEXP Ripd_native, SEXP Rgenome_start_native, SEXP R
                         }
                         contextEffect[cur_context] = ipd;
                 }
-        }
+        }*/
+
 	// load data and parameters
 	int genome_start_native = INTEGER(Rgenome_start_native)[0];
 	string genomeSeq = CHAR(STRING_ELT(RgenomeSeq,0));
@@ -1294,7 +1073,7 @@ RcppExport SEXP hieModel_NC (SEXP Ripd_native, SEXP Rgenome_start_native, SEXP R
                         continue;
                 }
 
-		map<string, vector<vector<double> > >::iterator it = contextEffect.find(cur_context);
+		map<string, map<string, vector<double> > >::iterator it = contextEffect.find(cur_context);
                	if (it!=contextEffect.end())
 			is_findContext[i] = 1;
 		else
@@ -1310,9 +1089,13 @@ RcppExport SEXP hieModel_NC (SEXP Ripd_native, SEXP Rgenome_start_native, SEXP R
 
 		if (method=="hieModel"){
 			if (it!=contextEffect.end()){
-				vector<vector<double> > ipd_ref = it->second;	
+				//vector<vector<double> > ipd_ref = it->second;	
+				vector<double> ipd_ref_mean = it->second["mean"];
+                                vector<double> ipd_ref_var = it->second["var"];
+                                vector<double> ipd_ref_len = it->second["len"];
+
 				// fit hierarchical model
-				map<string, vector<double> > hie_fit = hieModelEB_alt(ipd_ref, ipd_native);
+				map<string, vector<double> > hie_fit = hieModelEB_alt(ipd_native, ipd_ref_mean, ipd_ref_var, ipd_ref_len);
 				mu_native = mean(ipd_native);
 				sigma_native = var(ipd_native);
 				n_native = ipd_native.size();
@@ -1333,16 +1116,21 @@ RcppExport SEXP hieModel_NC (SEXP Ripd_native, SEXP Rgenome_start_native, SEXP R
 				sigma0[i] = hie_fit["hyperPara"][3];
 				
 				// liklihood ratio test
-				int k = ipd_ref.size();
-                                double cur_L_log_alt = getLogLikelihood_marginal(ipd_ref,hie_fit["hyperPara"][0],hie_fit["hyperPara"][1]
+				int k = ipd_ref_mean.size();
+                                double cur_L_log_alt = getLogLikelihood_marginal(ipd_ref_mean, ipd_ref_var, ipd_ref_len,
+							hie_fit["hyperPara"][0],hie_fit["hyperPara"][1]
                                                         ,hie_fit["hyperPara"][2], hie_fit["hyperPara"][3] );
 				cur_L_log_alt += lgamma((upsilon0[i] + n_native)/2) + upsilon0[i]*log(upsilon0[i]*sigma0[i])/2 -
                                         lgamma(upsilon0[i]/2) - (upsilon0[i]+n_native)*log( (n_native-1)*sigma_native + upsilon0[i]*sigma0[i] )/2
                                         -n_native*log(my_pi)/2;
 
-                                ipd_ref.push_back(ipd_native);
-                                map<string, vector<double> > hie_fit_null = hieModelEB(ipd_ref);
-                                double cur_L_log_null = getLogLikelihood_marginal(ipd_ref,hie_fit_null["hyperPara"][0],hie_fit_null["hyperPara"][1]
+                                ipd_ref_mean.push_back(mean(ipd_native));
+				ipd_ref_var.push_back(var(ipd_native));
+				ipd_ref_len.push_back(ipd_native.size());
+			
+                                map<string, vector<double> > hie_fit_null = hieModelEB(ipd_ref_mean, ipd_ref_var, ipd_ref_len);
+                                double cur_L_log_null = getLogLikelihood_marginal(ipd_ref_mean, ipd_ref_var, ipd_ref_len,
+							hie_fit_null["hyperPara"][0],hie_fit_null["hyperPara"][1]
                                                         ,hie_fit_null["hyperPara"][2], hie_fit_null["hyperPara"][3] );
                                 /*cur_L_log_alt += sum(ldnorm(ipd_native, mean(ipd_native), hie_fit_null["sigma"][k]));
                               	double sigma_native_null = (upsilon0[i]*sigma0[i] + (n_native-1)*sigma_native +
@@ -1368,28 +1156,6 @@ RcppExport SEXP hieModel_NC (SEXP Ripd_native, SEXP Rgenome_start_native, SEXP R
                         	L_log_null[i] = cur_L_log_null;
                         	L_log_alt[i] = cur_L_log_alt;
                         	LR_log[i] = cur_L_log_alt - cur_L_log_null;*/
-			}
-		}
-		if (method == "pooling"){
-			if (it!=contextEffect.end()){
-                		vector<vector<double> > ipd_ref = it->second;	
-				// pool
-				map<string, double > pool_fit = pooling(ipd_ref);
-
-				// test
-				mu_native = mean(ipd_native);
-                                sigma_native = var(ipd_native);
-                                n_native = ipd_native.size();
-
-                                mu_ctrl = pool_fit["mu"];
-                                sigma_ctrl = pool_fit["sigma"];
-                                if (is_cvg_all==1)
-					n_ctrl = pool_fit["sampleSize"];
-				else	
-					n_ctrl = pool_fit["sampleSize"]/double(ipd_ref.size());
-				detection[i] = get_t_stat(mu_native, sigma_native, n_native, mu_ctrl, sigma_ctrl, n_ctrl);
-                                ipd_ratio[i] = exp(mu_native - mu_ctrl);
-				sampleSize_history[i] = pool_fit["sampleSize"];
 			}
 		}
 		
@@ -1433,245 +1199,35 @@ RcppExport SEXP hieModel_NC (SEXP Ripd_native, SEXP Rgenome_start_native, SEXP R
 
 }
 
-RcppExport SEXP hieModel_NH (SEXP Ripd_native, SEXP Ripd_ctrl, SEXP Rgenome_start_native, SEXP Rgenome_start_ctrl,
-                         SEXP RgenomeSeq,  SEXP Rstrand, SEXP Rleft_len, SEXP Rright_len, SEXP RminPos, SEXP RminCvg)
-{
-	// load data and parameters
-	int genome_start_native = INTEGER(Rgenome_start_native)[0];
-        int genome_start_ctrl = INTEGER(Rgenome_start_ctrl)[0];
-        string genomeSeq = CHAR(STRING_ELT(RgenomeSeq,0));
-        int strand = INTEGER(Rstrand)[0];
-        int left_len =  INTEGER(Rleft_len)[0];
-        int right_len = INTEGER(Rright_len)[0];
-	int seed_len = left_len + right_len + 1;
-	int minPos = INTEGER(RminPos)[0];
-	int minCvg = INTEGER(RminCvg)[0];
-
-	// builld index for the genome
-	Rprintf("Build index for reference genome.\n"); 
-	map<string, vector<unsigned int> > genome_index = buildGenomeIndex(genomeSeq, seed_len);
-	
-	/*---------------Initialize results to record----------------------*/	
-	vector<double> detection(Rf_length(Ripd_native), sqrt(-1));	
-	vector<double> ipd_ratio(Rf_length(Ripd_native), sqrt(-1));
-	vector<double> is_findContext(Rf_length(Ripd_native), sqrt(-1));	
-	
-	vector<double> mu0(Rf_length(Ripd_native), sqrt(-1));
-	vector<double> kappa0(Rf_length(Ripd_native), sqrt(-1));
-	vector<double> upsilon0(Rf_length(Ripd_native), sqrt(-1));
-	vector<double> sigma0(Rf_length(Ripd_native), sqrt(-1));
-
-	vector<double> mu_native_est(Rf_length(Ripd_native), sqrt(-1));
-	vector<double> sigma2_native_est(Rf_length(Ripd_native), sqrt(-1));
-	vector<double> sampleSize_native(Rf_length(Ripd_native), sqrt(-1));
-
-	vector<double> mu_ctrl_est(Rf_length(Ripd_native), sqrt(-1));
-        vector<double> sigma2_ctrl_est(Rf_length(Ripd_native), sqrt(-1));
-        vector<double> sampleSize_ctrl(Rf_length(Ripd_native), sqrt(-1));
-	
-	vector<double> L_log_alt(Rf_length(Ripd_native), sqrt(-1));
-	vector<double> L_log_null(Rf_length(Ripd_native), sqrt(-1));
-	vector<double> LR_log (Rf_length(Ripd_native), sqrt(-1));
-
-	vector<double> effect_size(Rf_length(Ripd_native), sqrt(-1));
-	// scan genome and detect modifications
-	Rprintf("start to detect modifications.\n");
-       	for (int i=0;i<Rf_length(Ripd_native);i++){
-		if ((i+1)%10000==0) Rprintf("detected %d positions\r", i+1);
-		// get ipd for test
-		if (i + genome_start_native - genome_start_ctrl<0 || i + genome_start_native - genome_start_ctrl > Rf_length(Ripd_ctrl)-1)
-			continue;
-		double *ipd_native_tmp = REAL(VECTOR_ELT(Ripd_native,i));
-		double *ipd_ctrl_tmp = REAL(VECTOR_ELT(Ripd_ctrl, i + genome_start_native - genome_start_ctrl ));
-		vector<double> ipd_native(ipd_native_tmp, ipd_native_tmp + Rf_length(VECTOR_ELT(Ripd_native,i)) );
-		vector<double> ipd_ctrl(ipd_ctrl_tmp, ipd_ctrl_tmp + Rf_length(VECTOR_ELT(Ripd_ctrl, i + genome_start_native - genome_start_ctrl)) );
-		// get current context 
-		int cur_pos = i + genome_start_native - 1;
-		string cur_context;
-		if (strand == 0){
-			if (cur_pos - left_len<0 || cur_pos + right_len>Rf_length(Ripd_native)-1 || cur_pos + right_len > (int) genomeSeq.size()-1)
-				continue;
-			cur_context = genomeSeq.substr(cur_pos - left_len , right_len + left_len + 1);		
-		}else{
-			if (cur_pos - right_len<0 || cur_pos + left_len>Rf_length(Ripd_native)-1 || cur_pos + left_len > (int) genomeSeq.size()-1)
-                                continue;
-			cur_context = genomeSeq.substr(cur_pos - right_len, right_len + left_len + 1)  ;
-		}
-
-		if (ipd_native.size()<3 || ipd_ctrl.size() <3){
-                        sampleSize_native[i] = ipd_native.size();
-                        sampleSize_ctrl[i] = ipd_ctrl.size();
-                        continue;
-                }
-	
-		double mu_native = sqrt(-1);
-		double sigma_native = sqrt(-1);
-		double n_native = sqrt(-1);
-
-		double mu_ctrl = sqrt(-1);
-                double sigma_ctrl = sqrt(-1);
-                double n_ctrl = sqrt(-1);
-		
-		// detect modifications by incorporating homologous positions
-		vector<vector<double> > ipd_ref;
-		map<string, vector<unsigned int> >::iterator it = genome_index.find(cur_context);
-		if (it==genome_index.end()) { Rprintf("error: wrong reference genome\n"); return R_NilValue; }
-		if (it->second.size()>1) is_findContext[i] = 1; else is_findContext[i] = 0; 
-		if (is_findContext[i] == 1){
-			vector<unsigned int> homo_idx = it->second;
-			for (int j=0;j<(int)homo_idx.size();j++){
-				if (strand==0){
-					if (cur_pos == left_len + homo_idx[j]) continue;
-					vector<double> cur_homo_ipd(REAL(VECTOR_ELT(Ripd_ctrl, left_len + homo_idx[j] + genome_start_native - genome_start_ctrl )), 
-						REAL(VECTOR_ELT(Ripd_ctrl, left_len + homo_idx[j] + genome_start_native - genome_start_ctrl )) + 
-						Rf_length(VECTOR_ELT(Ripd_ctrl, left_len + homo_idx[j] + genome_start_native - genome_start_ctrl)));
-						if (cur_homo_ipd.size()>=minCvg) ipd_ref.push_back(cur_homo_ipd);
-				}else{
-					if (cur_pos == right_len + homo_idx[j]) continue;
-					vector<double> cur_homo_ipd(REAL(VECTOR_ELT(Ripd_ctrl, right_len + homo_idx[j] + genome_start_native - genome_start_ctrl )),
-                                                REAL(VECTOR_ELT(Ripd_ctrl, right_len + homo_idx[j] + genome_start_native - genome_start_ctrl )) +
-                                                Rf_length(VECTOR_ELT(Ripd_ctrl, right_len + homo_idx[j] + genome_start_native - genome_start_ctrl)));
-						if (cur_homo_ipd.size()>=minCvg) ipd_ref.push_back(cur_homo_ipd);
-				}
-			}
-			ipd_ref.push_back(ipd_ctrl);	
-			
-			// get t-statistic and ipd ratio
-			mu_native = mean(ipd_native);
-			sigma_native = var(ipd_native);
-			n_native = ipd_native.size();
-			
-			if (ipd_ref.size()-1>=minPos){
-				map<string, vector<double> > hie_fit = hieModelEB_alt(ipd_ref, ipd_native);
-				int k = (int) hie_fit["mu"].size()-1;
-				mu_ctrl = hie_fit["mu"][k];
-				sigma_ctrl = hie_fit["sigma"][k] * hie_fit["upsilon"][k]/(hie_fit["upsilon"][k]-2);
-				n_ctrl = ipd_ctrl.size();
-				detection[i] = get_t_stat(mu_native, sigma_native, n_native, mu_ctrl, sigma_ctrl, n_ctrl+hie_fit["hyperPara"][1]);
-					
-				// get hyper parameters
-				mu0[i] = hie_fit["hyperPara"][0];
-				kappa0[i] = hie_fit["hyperPara"][1];
-				upsilon0[i] = hie_fit["hyperPara"][2];
-				sigma0[i] = hie_fit["hyperPara"][3];
-		
-				// liklihood ratio test
-				double cur_L_log_alt = getLogLikelihood_marginal(ipd_ref,hie_fit["hyperPara"][0],hie_fit["hyperPara"][1]
-                                                        ,hie_fit["hyperPara"][2], hie_fit["hyperPara"][3] );
-				cur_L_log_alt += lgamma((upsilon0[i] + n_native)/2) + upsilon0[i]*log(upsilon0[i]*sigma0[i])/2 -
-                                        lgamma(upsilon0[i]/2) - (upsilon0[i]+n_native)*log( (n_native-1)*sigma_native + upsilon0[i]*sigma0[i] )/2
-                                        -n_native*log(my_pi)/2;
-
-				ipd_ref.pop_back();
-				vector<double> ipd_merge (ipd_ctrl);
-				for (int j=0;j<(int)ipd_native.size();j++) ipd_merge.push_back(ipd_native[j]);
-				ipd_ref.push_back(ipd_merge);
-				map<string, vector<double> > hie_fit_null = hieModelEB(ipd_ref);
-				double cur_L_log_null = getLogLikelihood_marginal(ipd_ref,hie_fit_null["hyperPara"][0],hie_fit_null["hyperPara"][1]
-							,hie_fit_null["hyperPara"][2], hie_fit_null["hyperPara"][3] );
-				/*cur_L_log_alt += sum(ldnorm(ipd_native, mean(ipd_native), hie_fit_null["sigma"][k]));
-				double sigma_native_null = (upsilon0[i]*sigma0[i] + (n_native-1)*sigma_native +
-                                                        kappa0[i]*n_native*(mu_native-mu0[i])*(mu_native-mu0[i])/(kappa0[i]+n_native))
-                                                         / (upsilon0[i] + n_native - 2);*/
-				/*double sigma_native_null = (upsilon0[i]*sigma0[i] + (n_native-1)*sigma_native)/ (upsilon0[i] + n_native - 2);
-				cur_L_log_alt += sum(ldnorm(ipd_native, mu_native, sigma_native_null));*/
-				L_log_null[i] = cur_L_log_null;
-				L_log_alt[i] = cur_L_log_alt;
-				LR_log[i] = cur_L_log_alt - cur_L_log_null;
-
-				/*double mu_native_null = (kappa0[i]*mu0[i] + n_native*mu_native)/(kappa0[i] + n_native);
-                                double sigma_native_null = (upsilon0[i]*sigma0[i] + (n_native-1)*sigma_native +
-                                                        kappa0[i]*n_native*(mu_native-mu0[i])*(mu_native-mu0[i])/(kappa0[i]+n_native))
-                                                         / (upsilon0[i] + n_native - 2);
-                                double cur_L_log_alt = getLogLikelihood_marginal(ipd_ref,hie_fit["hyperPara"][0],hie_fit["hyperPara"][1]
-                                                        ,hie_fit["hyperPara"][2], hie_fit["hyperPara"][3] )
-                                                        + sum(ldnorm(ipd_native, mu_native, sigma_native_null));
-                                for (int j=0;j<(int)ipd_native.size();j++) ipd_ref[k].push_back(ipd_native[j]);
-                                double cur_L_log_null = getLogLikelihood_marginal(ipd_ref,hie_fit["hyperPara"][0],hie_fit["hyperPara"][1]
-                                                        ,hie_fit["hyperPara"][2], hie_fit["hyperPara"][3] );
-                                L_log_null[i] = cur_L_log_null;
-                                L_log_alt[i] = cur_L_log_alt;
-                                LR_log[i] = cur_L_log_alt - cur_L_log_null;*/
-
-				/*double sigma_native_null = (upsilon0[i]*sigma0[i] + (n_native-1)*sigma_native +
-                                                        kappa0[i]*n_native*(mu_native-mu0[i])*(mu_native-mu0[i])/(kappa0[i]+n_native))
-                                                         / (upsilon0[i] + n_native - 2);
-                                LR_log[i] = get_t_stat(mu_native, sigma_native_null, n_native, mu_ctrl, sigma_ctrl, n_ctrl+hie_fit["hyperPara"][1]);*/
-
-			}else{
-				is_findContext[i] = 0;
-				mu_ctrl = mean(ipd_ctrl);
-	                        sigma_ctrl = var(ipd_ctrl);
-        	                n_ctrl = ipd_ctrl.size();
-                	        detection[i] = get_t_stat(mu_native, sigma_native, n_native, mu_ctrl, sigma_ctrl, n_ctrl);
-		
-				// get likelyhood
-                                vector<double> ipd_merge (ipd_ctrl);
-                                for (int j=0;j<(int)ipd_native.size();j++) ipd_merge.push_back(ipd_native[j]);
-                                double sigma_merge = var(ipd_merge);
-                                L_log_null[i] = sum(ldnorm(ipd_merge, mean(ipd_merge), sigma_merge));
-                                L_log_alt[i] = sum(ldnorm(ipd_native, mu_native, sigma_merge)) + sum(ldnorm(ipd_ctrl, mu_ctrl, sigma_merge));
-                                LR_log[i] = L_log_alt[i] - L_log_null[i];
-			}
-			ipd_ratio[i] = exp(mu_native - mu_ctrl);
-		}else{
-			mu_native = mean(ipd_native);
-                	sigma_native = var(ipd_native);
-                	n_native = ipd_native.size();
-			mu_ctrl = mean(ipd_ctrl);
-                	sigma_ctrl = var(ipd_ctrl);
-                	n_ctrl = ipd_ctrl.size();
-			detection[i] = get_t_stat(mu_native, sigma_native, n_native, mu_ctrl, sigma_ctrl, n_ctrl);
-			ipd_ratio[i] = exp(mu_native - mu_ctrl);
-		}	
-		mu_native_est[i] = mu_native;
-		sigma2_native_est[i] = sigma_native;
-		sampleSize_native[i] = n_native;
-		
-		mu_ctrl_est[i] = mu_ctrl;
-                sigma2_ctrl_est[i] = sigma_ctrl;
-                sampleSize_ctrl[i] = n_ctrl;	
-		
-		effect_size[i] = (mu_native- mu_ctrl)/sqrt(sigma_native + sigma_ctrl);
-	}	
-	
-	Rprintf("detected %d positions\n", Rf_length(Ripd_native));
-	// load results
-	map<string, vector<double> > result;	
-	result["t_stat"] = detection;
-	result["ipd_ratio"] = ipd_ratio; 
-	result["is_findContext"] = is_findContext;
-
-	result["theta"] = mu0;
-        result["kappa"] = kappa0;
-        result["upsilon"] = upsilon0;
-        result["tau2"] = sigma0;
-
-	result["mu_native"] = mu_native_est;
-	result["sigma2_native"] = sigma2_native_est;
-	result["sampleSize_native"] = sampleSize_native;
-
-	result["mu_ctrl"] = mu_ctrl_est;
-        result["sigma2_ctrl"] = sigma2_ctrl_est;
-        result["sampleSize_ctrl"] = sampleSize_ctrl;
-
-	result["L_log_null"] = L_log_null;
-	result["L_log_alt"] = L_log_alt;
-	result["LR_log"] = LR_log;
-
-	result["effect.size"] = effect_size;
-		
-	SEXP rl = Rcpp::wrap(result);
-	return rl;
-	
-}
 
 RcppExport SEXP hieModel_CC (SEXP Ripd_native, SEXP Ripd_ctrl, SEXP Rgenome_start_native, SEXP Rgenome_start_ctrl,
 			 SEXP RgenomeSeq, SEXP RcontextEffect, SEXP Rcontext, SEXP Rstrand, SEXP Rleft_len, SEXP Rright_len, SEXP Rmethod)
 {
 
 	// load context effect
-	map<string, vector<vector<double> > > contextEffect;
+	map<string, map<string, vector<double> > > contextEffect;
+        if (!Rf_isNull(RcontextEffect)){
+                for (int i=0;i<Rf_length(RcontextEffect);i++){
+                        string cur_context = CHAR(STRING_ELT(Rcontext,i));
+                        map<string, vector<double > > cur_data;
+                        vector<double> tmp;
+                        cur_data["mean"] = tmp; cur_data["var"] = tmp; cur_data["len"] = tmp;
+                        SEXP cur_Rdata = VECTOR_ELT(RcontextEffect,i);
+                        double *dat;
+                        // get mean
+                        dat = REAL(VECTOR_ELT(cur_Rdata,0));
+                        for (int j=0;j<Rf_length(VECTOR_ELT(cur_Rdata,0)); j++){cur_data["mean"].push_back(dat[j]);}
+                        // get var
+                        dat = REAL(VECTOR_ELT(cur_Rdata,1));
+                        for (int j=0;j<Rf_length(VECTOR_ELT(cur_Rdata,1)); j++){cur_data["var"].push_back(dat[j]);}
+                        // get len
+                        dat = REAL(VECTOR_ELT(cur_Rdata,2));
+                        for (int j=0;j<Rf_length(VECTOR_ELT(cur_Rdata,2)); j++){cur_data["len"].push_back(dat[j]);}
+                        contextEffect[cur_context] = cur_data;
+                }
+        }
+
+	/*map<string, vector<vector<double> > > contextEffect;
 	if (!Rf_isNull(RcontextEffect)){
 		for (int i=0;i<Rf_length(RcontextEffect);i++){
 			string cur_context = CHAR(STRING_ELT(Rcontext,i));
@@ -1686,7 +1242,8 @@ RcppExport SEXP hieModel_CC (SEXP Ripd_native, SEXP Ripd_ctrl, SEXP Rgenome_star
 			}
 			contextEffect[cur_context] = ipd;
 		}
-	}
+	}*/
+
 	// load data and parameters
 	int genome_start_native = INTEGER(Rgenome_start_native)[0];
 	int genome_start_ctrl = INTEGER(Rgenome_start_ctrl)[0];
@@ -1750,7 +1307,7 @@ RcppExport SEXP hieModel_CC (SEXP Ripd_native, SEXP Ripd_ctrl, SEXP Rgenome_star
                         sampleSize_ctrl[i] = ipd_ctrl.size();
                         continue;
                 }
-		map<string, vector<vector<double> > >::iterator it = contextEffect.find(cur_context);
+		map<string, map<string, vector<double> > >::iterator it = contextEffect.find(cur_context);
                	if (it!=contextEffect.end())
 			is_findContext[i] = 1;
 		else
@@ -1766,12 +1323,18 @@ RcppExport SEXP hieModel_CC (SEXP Ripd_native, SEXP Ripd_ctrl, SEXP Rgenome_star
 
 		if (method=="hieModel"){
 			if (it!=contextEffect.end()){
-				vector<vector<double> > ipd_ref = it->second;
-				ipd_ref.push_back(ipd_ctrl);
+				vector<double> ipd_ref_mean = it->second["mean"];
+				vector<double> ipd_ref_var = it->second["var"];
+				vector<double> ipd_ref_len = it->second["len"];
+				ipd_ref_mean.push_back(mean(ipd_ctrl));
+				ipd_ref_var.push_back(var(ipd_ctrl));
+				ipd_ref_len.push_back(ipd_ctrl.size());
+				//ipd_ref.push_back(ipd_ctrl);
 					
 				// fit hierarchical model
-				map<string, vector<double> > hie_fit = hieModelEB_alt(ipd_ref,ipd_native);
-				
+				//map<string, vector<double> > hie_fit = hieModelEB_alt(ipd_ref,ipd_native);
+				map<string, vector<double> > hie_fit = hieModelEB_alt(ipd_native, ipd_ref_mean, ipd_ref_var, ipd_ref_len);
+
 				// get t-statistic and ipd ratio
 				mu_native = mean(ipd_native);
 				sigma_native = var(ipd_native);
@@ -1789,18 +1352,28 @@ RcppExport SEXP hieModel_CC (SEXP Ripd_native, SEXP Ripd_ctrl, SEXP Rgenome_star
 				sigma0[i] = hie_fit["hyperPara"][3];
 				
 				// liklihood ratio test
-				double cur_L_log_alt = getLogLikelihood_marginal(ipd_ref,hie_fit["hyperPara"][0],hie_fit["hyperPara"][1]
+				double cur_L_log_alt = getLogLikelihood_marginal(ipd_ref_mean, ipd_ref_var, ipd_ref_len,
+							hie_fit["hyperPara"][0],hie_fit["hyperPara"][1]
                                                         ,hie_fit["hyperPara"][2], hie_fit["hyperPara"][3] );
 				cur_L_log_alt += lgamma((upsilon0[i] + n_native)/2) + upsilon0[i]*log(upsilon0[i]*sigma0[i])/2 -
                                         lgamma(upsilon0[i]/2) - (upsilon0[i]+n_native)*log( (n_native-1)*sigma_native + upsilon0[i]*sigma0[i] )/2
                                         -n_native*log(my_pi)/2;
 
-				ipd_ref.pop_back();
+				//ipd_ref.pop_back();
+				ipd_ref_mean.pop_back();
+				ipd_ref_var.pop_back();
+				ipd_ref_len.pop_back();
+
 				vector<double> ipd_merge (ipd_ctrl);
 				for (int j=0;j<(int)ipd_native.size();j++) ipd_merge.push_back(ipd_native[j]);
-				ipd_ref.push_back(ipd_merge);
-				map<string, vector<double> > hie_fit_null = hieModelEB(ipd_ref);
-				double cur_L_log_null = getLogLikelihood_marginal(ipd_ref,hie_fit_null["hyperPara"][0],hie_fit_null["hyperPara"][1]
+				
+				ipd_ref_mean.push_back(mean(ipd_merge));
+				ipd_ref_var.push_back(var(ipd_merge));
+				ipd_ref_len.push_back(ipd_merge.size());
+				
+				map<string, vector<double> > hie_fit_null = hieModelEB(ipd_ref_mean, ipd_ref_var, ipd_ref_len);
+				double cur_L_log_null = getLogLikelihood_marginal(ipd_ref_mean, ipd_ref_var, ipd_ref_len,
+							hie_fit_null["hyperPara"][0],hie_fit_null["hyperPara"][1]
 							,hie_fit_null["hyperPara"][2], hie_fit_null["hyperPara"][3] );
 				/*cur_L_log_alt += sum(ldnorm(ipd_native, mean(ipd_native), hie_fit_null["sigma"][k]));
 				double sigma_native_null = (upsilon0[i]*sigma0[i] + (n_native-1)*sigma_native +
@@ -1864,43 +1437,6 @@ RcppExport SEXP hieModel_CC (SEXP Ripd_native, SEXP Ripd_ctrl, SEXP Rgenome_star
                                 //detection[i] = - fabs(get_t_stat(mu_native, sigma_native, n_native, mu_ctrl, sigma_ctrl, n_ctrl));
                                 //detection[i] = - fabs(get_t_stat(mu_native, sigma_native, 1, mu_ctrl, sigma_ctrl, 1));
 				ipd_ratio[i] = exp(mu_native - mu_ctrl);
-			}else{
-				if (method == "pooling"){
-					if (it!=contextEffect.end()){
-                                		vector<vector<double> > ipd_ref = it->second;
-                                		ipd_ref.push_back(ipd_ctrl);
-						
-						// pool
-						map<string, double > pool_fit = pooling(ipd_ref);
-
-						// test
-						mu_native = mean(ipd_native);
-                                		sigma_native = var(ipd_native);
-                                		n_native = ipd_native.size();
-
-                                		mu_ctrl = pool_fit["mu"];
-                                		sigma_ctrl = pool_fit["sigma"];
-                                		//n_ctrl = ipd_ctrl.size();
-                                		n_ctrl = pool_fit["sampleSize"];
-						detection[i] = get_t_stat(mu_native, sigma_native, n_native, mu_ctrl, sigma_ctrl, n_ctrl);
-						//detection[i] = - fabs(get_t_stat(mu_native, sigma_native, n_native, mu_ctrl, sigma_ctrl, n_ctrl));
-						//detection[i] = - fabs(get_t_stat(mu_native, sigma_native, 1, mu_ctrl, sigma_ctrl, 1));
-                                		ipd_ratio[i] = exp(mu_native - mu_ctrl);
-						sampleSize_history[i] = pool_fit["sampleSize"] - ipd_ctrl.size();
-					}else{
-						mu_native = mean(ipd_native);
-                                		sigma_native = var(ipd_native);
-                                		n_native = ipd_native.size();
-
-                                		mu_ctrl = mean(ipd_ctrl);
-                                		sigma_ctrl = var(ipd_ctrl);
-                                		n_ctrl = ipd_ctrl.size();
-						detection[i] = get_t_stat(mu_native, sigma_native, n_native, mu_ctrl, sigma_ctrl, n_ctrl);
-                                		//detection[i] = - fabs(get_t_stat(mu_native, sigma_native, n_native, mu_ctrl, sigma_ctrl, n_ctrl));
-                                		//detection[i] = - fabs(get_t_stat(mu_native, sigma_native, 1, mu_ctrl, sigma_ctrl, 1));
-						ipd_ratio[i] = exp(mu_native - mu_ctrl);
-					}	
-				}
 			}
 		}
 		mu_native_est[i] = mu_native;
@@ -1943,254 +1479,7 @@ RcppExport SEXP hieModel_CC (SEXP Ripd_native, SEXP Ripd_ctrl, SEXP Rgenome_star
 	return rl;
 }
 
-RcppExport SEXP hieModel_CC_perm (SEXP Ripd_native, SEXP Ripd_ctrl, SEXP Rgenome_start_native, SEXP Rgenome_start_ctrl,
-                         SEXP RgenomeSeq, SEXP RcontextEffect, SEXP Rcontext, SEXP Rstrand, SEXP Rleft_len, SEXP Rright_len, SEXP Rmethod)
-{
-        // load context effect
-        map<string, vector<vector<double> > > contextEffect;
-        for (int i=0;i<Rf_length(RcontextEffect);i++){
-                string cur_context = CHAR(STRING_ELT(Rcontext,i));
-                //vector<vector<double> > ipd(Rf_length(VECTOR_ELT(RcontextEffect,i)), 0);
-                vector<vector<double> > ipd;
-                for (int j=0;j<Rf_length(VECTOR_ELT(RcontextEffect,i)); j++) {vector<double> tmp; ipd.push_back(tmp);}
-                for (int j=0;j<Rf_length(VECTOR_ELT(RcontextEffect,i)); j++){
-                        double * cur_ipd = REAL(VECTOR_ELT(VECTOR_ELT(RcontextEffect,i),j));
-                        int cur_cvg = Rf_length(VECTOR_ELT(VECTOR_ELT(RcontextEffect,i),j));
-                        for (int k=0; k<cur_cvg; k++ ){
-                                ipd[j].push_back(cur_ipd[k]);
-                        }
-                }
-                contextEffect[cur_context] = ipd;
-        }
 
-        // load data and parameters
-        int genome_start_native = INTEGER(Rgenome_start_native)[0];
-        int genome_start_ctrl = INTEGER(Rgenome_start_ctrl)[0];
-        string genomeSeq = CHAR(STRING_ELT(RgenomeSeq,0));
-        int strand = INTEGER(Rstrand)[0];
-        int left_len = 	INTEGER(Rleft_len)[0];
-        int right_len = INTEGER(Rright_len)[0];
-        string method = CHAR(STRING_ELT(Rmethod,0));
-        Rprintf("method : %s\n",method.c_str());
-
-        /*-----------------start to detect modifications----------------------*/
-        vector<double> detection(Rf_length(Ripd_native), sqrt(-1));
-        vector<double> ipd_ratio(Rf_length(Ripd_native), sqrt(-1));
-        vector<double> is_findContext(Rf_length(Ripd_native), sqrt(-1));
-
-        vector<double> mu0(Rf_length(Ripd_native), sqrt(-1));
-        vector<double> kappa0(Rf_length(Ripd_native), sqrt(-1));
-        vector<double> upsilon0(Rf_length(Ripd_native), sqrt(-1));
-        vector<double> sigma0(Rf_length(Ripd_native), sqrt(-1));
-
-        vector<double> mu_native_est(Rf_length(Ripd_native), sqrt(-1));
-        vector<double> sigma2_native_est(Rf_length(Ripd_native), sqrt(-1));
-        vector<double> sampleSize_native(Rf_length(Ripd_native), sqrt(-1));
-
-        vector<double> mu_ctrl_est(Rf_length(Ripd_native), sqrt(-1));
-        vector<double> sigma2_ctrl_est(Rf_length(Ripd_native), sqrt(-1));
-        vector<double> sampleSize_ctrl(Rf_length(Ripd_native), sqrt(-1));
-
-        vector<double> sampleSize_history(Rf_length(Ripd_native), sqrt(-1));
-
-        for (int i=0;i<Rf_length(Ripd_native);i++){
-                if ((i+1)%10000==0) Rprintf("detected %d positions\r", i+1);
-                // get ipd for test
-                if (i + genome_start_native - genome_start_ctrl<0 || i + genome_start_native - genome_start_ctrl > Rf_length(Ripd_ctrl)-1)
-                        continue;
-                double *ipd_native_tmp = REAL(VECTOR_ELT(Ripd_native,i));
-                double *ipd_ctrl_tmp = REAL(VECTOR_ELT(Ripd_ctrl, i + genome_start_native - genome_start_ctrl ));
-                vector<double> ipd_native(ipd_native_tmp, ipd_native_tmp + Rf_length(VECTOR_ELT(Ripd_native,i)) );
-                vector<double> ipd_ctrl(ipd_ctrl_tmp, ipd_ctrl_tmp + Rf_length(VECTOR_ELT(Ripd_ctrl, i + genome_start_native - genome_start_ctrl)) );
-                if (ipd_native.size()<3 || ipd_ctrl.size() <3)
-                        continue;
-                // get context effect
-                //Rprintf("%d : ",i);
-                int cur_pos = i - genome_start_native + 1;
-                string cur_context;
-                if (strand == 0){
-                        if (cur_pos - left_len<0 || cur_pos + right_len>Rf_length(Ripd_native)-1 || cur_pos + right_len > (int) genomeSeq.size()-1)
-                                continue;
-                        cur_context = genomeSeq.substr(cur_pos - left_len , right_len + left_len + 1);
-                }else{
-                        if (cur_pos - right_len<0 || cur_pos + left_len>Rf_length(Ripd_native)-1 || cur_pos + left_len > (int) genomeSeq.size()-1)
-                                continue;
-                        cur_context = SP_reverseSeq (genomeSeq.substr(cur_pos - right_len, right_len + left_len + 1) ) ;
-                }
-                map<string, vector<vector<double> > >::iterator it = contextEffect.find(cur_context);
-                if (it!=contextEffect.end())
-                        is_findContext[i] = 1;
-                else
-                        is_findContext[i] = 0;
-
-                double mu_native = sqrt(-1);
-                double sigma_native = sqrt(-1);
-                double n_native = sqrt(-1);
-
-                double mu_ctrl = sqrt(-1);
-                double sigma_ctrl = sqrt(-1);
-                double n_ctrl = sqrt(-1);
-
-                if (method=="hieModel"){
-                        if (it!=contextEffect.end()){
-                                // permute native, control and historical data
-				vector<vector<double> > ipd_pool = it->second;
-				ipd_pool.push_back(ipd_ctrl);
-				ipd_pool.push_back(ipd_native);
-				ipd_pool = sample_group(ipd_pool);
-		
-				vector<vector<double> > ipd_ref;
-				for (int j=0;j<(int)ipd_pool.size()-1;j++)
-					ipd_ref.push_back(ipd_pool[j]);	
-
-				vector<double> ipd_native_perm = ipd_pool[ipd_pool.size()-1];
-
-                                // fit hierarchical model
-                                map<string, vector<double> > hie_fit = hieModelEB(ipd_ref);
-                                // get t-statistic and ipd ratio
-                                mu_native = mean(ipd_native_perm);
-                                sigma_native = var(ipd_native_perm);
-                                n_native = ipd_native_perm.size();
-
-                                int k = (int) hie_fit["mu"].size()-1;
-                                mu_ctrl = hie_fit["mu"][k];
-                                sigma_ctrl = hie_fit["sigma"][k] * hie_fit["upsilon"][k]/(hie_fit["upsilon"][k]-2);
-                                n_ctrl = ipd_ctrl.size();
-                                detection[i] = get_t_stat(mu_native, sigma_native, n_native, mu_ctrl, sigma_ctrl, n_ctrl+hie_fit["hyperPara"][1]);
-                                ipd_ratio[i] = exp(mu_native - mu_ctrl);
-
-                                // get hyper parameters
-                                mu0[i] = hie_fit["hyperPara"][0];
-                                kappa0[i] = hie_fit["hyperPara"][1];
-                                upsilon0[i] = hie_fit["hyperPara"][2];
-                                sigma0[i] = hie_fit["hyperPara"][3];
-                        }else{
-				vector<vector<double> > ipd_pool;
-				ipd_pool.push_back(ipd_native);
-				ipd_pool.push_back(ipd_ctrl);
-				ipd_pool = sample_group(ipd_pool);
-				
-				vector<double> ipd_native_perm = ipd_pool[0];
-				vector<double> ipd_ctrl_perm = ipd_pool[1];
-
-                                mu_native = mean(ipd_native_perm);
-                                sigma_native = var(ipd_native_perm);
-                                n_native = ipd_native_perm.size();
-
-                                mu_ctrl = mean(ipd_ctrl_perm);
-                                sigma_ctrl = var(ipd_ctrl_perm);
-                                n_ctrl = ipd_ctrl_perm.size();
-                                detection[i] = get_t_stat(mu_native, sigma_native, n_native, mu_ctrl, sigma_ctrl, n_ctrl);
-                                
-				ipd_ratio[i] = exp(mu_native - mu_ctrl);
-                        }
-                }else{
-                        if (method=="CC"){
-                        	vector<vector<double> > ipd_pool;
-                                ipd_pool.push_back(ipd_native);
-                                ipd_pool.push_back(ipd_ctrl);
-                                ipd_pool = sample_group(ipd_pool);
-
-                                vector<double> ipd_native_perm = ipd_pool[0];
-                                vector<double> ipd_ctrl_perm = ipd_pool[1];
-
-                                mu_native = mean(ipd_native_perm);
-                                sigma_native = var(ipd_native_perm);
-                                n_native = ipd_native_perm.size();
-
-                                mu_ctrl = mean(ipd_ctrl_perm);
-                                sigma_ctrl = var(ipd_ctrl_perm);
-                                n_ctrl = ipd_ctrl_perm.size();
-                                detection[i] = get_t_stat(mu_native, sigma_native, n_native, mu_ctrl, sigma_ctrl, n_ctrl);
-
-                                ipd_ratio[i] = exp(mu_native - mu_ctrl);
-
-			}else{
-                                if (method == "pooling"){
-                                        if (it!=contextEffect.end()){
-						vector<vector<double> > ipd_pool = it->second;
-                                		ipd_pool.push_back(ipd_ctrl);
-                                		ipd_pool.push_back(ipd_native);
-                                		ipd_pool = sample_group(ipd_pool);
-
-                                		vector<vector<double> > ipd_ref;
-                                		for (int j=0;j<(int)ipd_pool.size()-1;j++)
-                                        		ipd_ref.push_back(ipd_pool[j]);
-
-                                		vector<double> ipd_native_perm = ipd_pool[ipd_pool.size()-1];
-
-                                                // pool
-                                                map<string, double > pool_fit = pooling(ipd_ref);
-
-                                                // test
-                                                mu_native = mean(ipd_native_perm);
-                                                sigma_native = var(ipd_native_perm);
-                                                n_native = ipd_native_perm.size();
-
-                                                mu_ctrl = pool_fit["mu"];
-                                                sigma_ctrl = pool_fit["sigma"];
-                                                n_ctrl = pool_fit["sampleSize"];
-                                                detection[i] = get_t_stat(mu_native, sigma_native, n_native, mu_ctrl, sigma_ctrl, n_ctrl);
-                                                ipd_ratio[i] = exp(mu_native - mu_ctrl);
-                                                sampleSize_history[i] = pool_fit["sampleSize"] - ipd_ctrl.size();
-                                        }else{
-                                        	vector<vector<double> > ipd_pool;
-                              			ipd_pool.push_back(ipd_native);
-                                		ipd_pool.push_back(ipd_ctrl);
-                                		ipd_pool = sample_group(ipd_pool);
-
-                                		vector<double> ipd_native_perm = ipd_pool[0];
-                                		vector<double> ipd_ctrl_perm = ipd_pool[1];
-
-                                		mu_native = mean(ipd_native_perm);
-                                		sigma_native = var(ipd_native_perm);
-                                		n_native = ipd_native_perm.size();
-
-                                		mu_ctrl = mean(ipd_ctrl_perm);
-                                		sigma_ctrl = var(ipd_ctrl_perm);
-                                		n_ctrl = ipd_ctrl_perm.size();
-                                		detection[i] = get_t_stat(mu_native, sigma_native, n_native, mu_ctrl, sigma_ctrl, n_ctrl);
-
-                                		ipd_ratio[i] = exp(mu_native - mu_ctrl);
-
-					}
-                                }
-                        }
-                }
-                mu_native_est[i] = mu_native;
-                sigma2_native_est[i] = sigma_native;
-                sampleSize_native[i] = n_native;
-
-                mu_ctrl_est[i] = mu_ctrl;
-                sigma2_ctrl_est[i] = sigma_ctrl;
-                sampleSize_ctrl[i] = n_ctrl;
-
-        }
-        Rprintf("detected %d positions\n", Rf_length(Ripd_native));
-        // load results
-        map<string, vector<double> > result;
-        result["t_stat"] = detection;
-        result["ipd_ratio"] = ipd_ratio;
-        result["is_findContext"] = is_findContext;
-
-	result["theta"] = mu0;
-        result["kappa"] = kappa0;
-        result["upsilon"] = upsilon0;
-        result["tau2"] = sigma0;
-
-        result["mu_native"] = mu_native_est;
-        result["sigma2_native"] = sigma2_native_est;
-        result["sampleSize_native"] = sampleSize_native;
-
-        result["mu_ctrl"] = mu_ctrl_est;
-        result["sigma2_ctrl"] = sigma2_ctrl_est;
-        result["sampleSize_ctrl"] = sampleSize_ctrl;
-
-        result["sampleSize_history"] = sampleSize_history;
-        //SEXP rl=R_NilValue;
-        SEXP rl = Rcpp::wrap(result);
-        return rl;
-}
 
 RcppExport SEXP collapseContextEffectByPos(SEXP RcontextEffectByPos, SEXP RcvgCutoff)
 {
@@ -2380,7 +1669,7 @@ RcppExport SEXP bootstrap_bg_motif(SEXP Rmotif, SEXP RgenomeSeq, SEXP Ridx_sel, 
 	//return Rcpp::wrap(motif_freq);
 	//return Rcpp::List::create(Rcpp::Named("motif_freq")=Rcpp::wrap(motif_freq), Rcpp::Named("context_B")=Rcpp::wrap(context_B) );
 }
-RcppExport SEXP hieModelEB_core(SEXP data, SEXP Rmax_iter)
+/*RcppExport SEXP hieModelEB_core(SEXP data, SEXP Rmax_iter)
 {
 	vector<vector<double> > ipd;
 	for (int i=0;i<Rf_length(data);i++){
@@ -2405,7 +1694,7 @@ RcppExport SEXP hieModelEB_core_alt(SEXP data, SEXP Ripd_native, SEXP Rmax_iter)
         int max_iter = INTEGER(Rmax_iter)[0];
 	//return Rcpp::wrap(ipd_native);        
 	return Rcpp::wrap(hieModelEB_alt(ipd, ipd_native, max_iter));
-}
+}*/
 
 
 RcppExport SEXP filter_outlier_wrap(SEXP data)
@@ -2587,7 +1876,7 @@ double f (double x, void * params) {
        return f;
 }
 
-RcppExport SEXP testhieModel(SEXP Rdata)
+/*RcppExport SEXP testhieModel(SEXP Rdata)
 {
 	vector<vector<double> > data;
 	int n_ref = Rf_length(Rdata);
@@ -2599,7 +1888,7 @@ RcppExport SEXP testhieModel(SEXP Rdata)
 	map<string, vector<double> > result = hieModelEB(data);		
 	SEXP rl=Rcpp::wrap(result);
         return rl;
-}
+}*/
 
 RcppExport SEXP testString(SEXP RcontextEffect, SEXP RcontextEx)
 {
@@ -2634,7 +1923,7 @@ RcppExport SEXP testlgamma(SEXP Rx)
 	return Rcpp::wrap(y);
 }
 
-RcppExport SEXP testGetLikelihood_marginal(SEXP data, SEXP Rtheta, SEXP Rkappa, SEXP Rupsilon, SEXP Rtau2)
+/*RcppExport SEXP testGetLikelihood_marginal(SEXP data, SEXP Rtheta, SEXP Rkappa, SEXP Rupsilon, SEXP Rtau2)
 {
 	double theta = REAL(Rtheta)[0];
 	double kappa = REAL(Rkappa)[0];
@@ -2647,7 +1936,7 @@ RcppExport SEXP testGetLikelihood_marginal(SEXP data, SEXP Rtheta, SEXP Rkappa, 
 		y.push_back(cur_y);
 	}
 	return Rcpp::wrap(getLogLikelihood_marginal(y, theta, kappa, upsilon, tau2));	
-}
+}*/
 
 RcppExport SEXP testLogNormalDensity(SEXP Rx, SEXP Rmu, SEXP Rsigma2)
 {
@@ -2658,6 +1947,29 @@ RcppExport SEXP testLogNormalDensity(SEXP Rx, SEXP Rmu, SEXP Rsigma2)
 }
 
 
-
-
+RcppExport SEXP testloadContextEffect(SEXP RcontextEffect, SEXP Rcontext)
+{
+	map<string, map<string, vector<double> > > contextEffect;
+        if (!Rf_isNull(RcontextEffect)){
+                for (int i=0;i<Rf_length(RcontextEffect);i++){
+                        string cur_context = CHAR(STRING_ELT(Rcontext,i));
+                        map<string, vector<double > > cur_data;
+                        vector<double> tmp;
+                        cur_data["mean"] = tmp; cur_data["var"] = tmp; cur_data["len"] = tmp;
+                        SEXP cur_Rdata = VECTOR_ELT(RcontextEffect,i);
+                        double *dat;
+                        // get mean
+                        dat = REAL(VECTOR_ELT(cur_Rdata,0));
+                        for (int j=0;j<Rf_length(VECTOR_ELT(cur_Rdata,0)); j++){cur_data["mean"].push_back(dat[j]);}
+                        // get var
+                        dat = REAL(VECTOR_ELT(cur_Rdata,1));
+                        for (int j=0;j<Rf_length(VECTOR_ELT(cur_Rdata,1)); j++){cur_data["var"].push_back(dat[j]);}
+                        // get len
+                        dat = REAL(VECTOR_ELT(cur_Rdata,2));
+                        for (int j=0;j<Rf_length(VECTOR_ELT(cur_Rdata,2)); j++){cur_data["len"].push_back(dat[j]);}
+                        contextEffect[cur_context] = cur_data;
+                }
+        }
+	return Rcpp::wrap(contextEffect);
+}
 

@@ -115,28 +115,21 @@ vector<double> hyperParaEstimate_alt (double y_bar_native, double s2_native, dou
     	result.push_back(sigma0);
     	return result;
 }
-map<string, vector<double> > hieModelEB_alt(const vector<vector<double> >  & data, const vector<double> & data_native, int max_iter=20)
+map<string, vector<double> > hieModelEB_alt(vector<double> & data_native, vector<double> & ipd_ref_mean, vector<double> & ipd_ref_var, vector<double> & ipd_ref_len, int max_iter=20)
 {
-    	vector <double> sampleSize;
+    	vector <double> sampleSize = ipd_ref_len;
 	double sampleSize_native = data_native.size();
-    	double N = 0;
 
     	// get mean and variance for each group (sufficient statistics)
-    	vector<double> s2 = getVarForEachGroup(data);
-    	vector<double> y_bar = getMeanForEachGroup(data);
+    	vector<double> s2 = ipd_ref_var;
+    	vector<double> y_bar = ipd_ref_mean;
     	double s2_native = var(data_native);
 	double y_bar_native = mean(data_native);	
 
     	/*------------------ set initial values of hyper parameters ------------------*/
     	// mu0
-    	double mu0=0;
-    	for (unsigned int i=0;i<data.size();i++){
-        	mu0 += sum(data[i]);
-        	sampleSize.push_back(data[i].size());
-        	N += data[i].size();
-    	}
-    	mu0 = mu0/N;
-
+    	double mu0 = mean(y_bar);
+	
     	// kappa0
     	double kappa0 = 0 ;
     	for (unsigned int i=0; i<y_bar.size(); i++){

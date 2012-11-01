@@ -121,13 +121,15 @@ vector <double> getMeanForEachGroup(const vector<vector<double> >  & data)
         result.push_back(mean(data[i]));
     return result;
 }
-double getLogLikelihood_marginal(const vector<vector<double> > &y, double theta, double kappa, double upsilon, double tau2)
+double getLogLikelihood_marginal(vector<double> & ipd_ref_mean, vector<double> & ipd_ref_var,
+                                vector<double> & ipd_ref_len, double theta, double kappa, 
+				double upsilon, double tau2)
 {
 	double LH = 0;
-	for (int i=0;i<(int)y.size();i++){
-		int n = y[i].size();
-		double s2 = var(y[i]);
-		double y_bar = mean(y[i]);
+	for (int i=0;i<(int)ipd_ref_mean.size();i++){
+		int n = ipd_ref_len[i];
+		double s2 = ipd_ref_var[i];
+		double y_bar = ipd_ref_mean[i];
 		double sigma2_t = ( upsilon*tau2 + (n-1)*s2 + kappa*n*(y_bar-theta)*(y_bar-theta)/(kappa+n)  )	 / (upsilon + n);	
 		LH += lgamma((upsilon + n)/2) + upsilon*log(upsilon*tau2)/2 + log(kappa)/2 
 			- lgamma(upsilon/2) - (upsilon + n)*log((upsilon + n)*sigma2_t)/2 - log(kappa + n)/2 
@@ -136,24 +138,18 @@ double getLogLikelihood_marginal(const vector<vector<double> > &y, double theta,
 	return LH;
 }
 
-map<string, vector<double> > hieModelEB(const vector<vector<double> >  & data, int max_iter=20)
+map<string, vector<double> > hieModelEB(vector<double> & ipd_ref_mean, vector<double> & ipd_ref_var,
+                                vector<double> & ipd_ref_len, int max_iter=20)
 {
-    vector <double> sampleSize;
-    double N = 0;
+    vector <double> sampleSize = ipd_ref_len;
 
     // get mean and variance for each group (sufficient statistics)
-    vector<double> s2 = getVarForEachGroup(data);
-    vector<double> y_bar = getMeanForEachGroup(data);
-
+    vector<double> s2 = ipd_ref_var;
+    vector<double> y_bar = ipd_ref_mean;
+  
     /*------------------ set initial values of hyper parameters ------------------*/
     // mu0
-    double mu0=0;
-    for (unsigned int i=0;i<data.size();i++){
-        mu0 += sum(data[i]);
-        sampleSize.push_back(data[i].size());
-        N += data[i].size();
-    }
-    mu0 = mu0/N;
+    double mu0 = mean(y_bar);
 
     // kappa0
     double kappa0 = 0 ;

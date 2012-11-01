@@ -1,3 +1,12 @@
+summaryContextEffect <- function(context.effect.full)
+{
+	context.effect <- list()
+	context.effect <- lapply(context.effect.full, function(x) {rl <- list(); rl$mean <- as.numeric(sapply(x,mean));
+								   rl$var <- as.numeric(sapply(x,var)); rl$len <- as.numeric(sapply(x,length));rl } )		
+	context.effect
+
+}
+
 getContextEffect <- function(alnsF, left.len, right.len)
 {
 	if (left.len<1 | right.len < 1)
@@ -18,7 +27,7 @@ getContextEffectForRead <- function(alnsF, context.effect, left.len, right.len)
 	.Call('getContextEffectForRead',alnsF, as.numeric(context.effect), names(context.effect), as.integer(left.len), as.integer(right.len) )
 	
 }
-getContextEffectByPos <- function(genomeF, genomeSeq, left.len=6, right.len=1, is.extend=FALSE)
+getContextEffectByPos <- function(genomeF, genomeSeq, left.len=6, right.len=1, min.cvg=15, min.pos=10, is.filter=TRUE, is.summary=TRUE, is.extend=FALSE)
 {
 	if (any(names(genomeSeq$pos) != names(genomeSeq$neg)) | any(names(genomeF$features$ipd_pos) != names(genomeF$features$ipd_neg))
 		| any(names(genomeSeq$pos) != names(genomeF$features$ipd_pos)) ){
@@ -65,10 +74,24 @@ getContextEffectByPos <- function(genomeF, genomeSeq, left.len=6, right.len=1, i
 	
 		}
 	}
-	if (is.extend==FALSE)
-		return (context.effect)
-	else
+	
+	# remove low coverage positions and contexts with too few positions
+	if (is.filter == TRUE){
+		cat('remove low coverage positions and contexts with too few positions.\n')
+		context.effect <- trim.context.effect(context.effect, min.cvg)
+		len <- sapply(context.effect, length)
+		context.effect <- context.effect[len>=min.pos]
+	}
+
+	if (is.extend == FALSE){
+		if (is.summary == TRUE){
+			return (summaryContextEffect(context.effect))
+		}else{
+			return (context.effect)
+		}
+	}else{
 		return (list(context.effect=context.effect, context.ex = context.ex))	
+	}
 }
 
 
