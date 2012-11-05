@@ -29,8 +29,7 @@ getContextEffectForRead <- function(alnsF, context.effect, left.len, right.len)
 }
 getContextEffectByPos <- function(genomeF, genomeSeq, left.len=6, right.len=1, min.cvg=15, min.pos=10, is.filter=TRUE, is.summary=TRUE, is.extend=FALSE)
 {
-	if (any(names(genomeSeq$pos) != names(genomeSeq$neg)) | any(names(genomeF$features$ipd_pos) != names(genomeF$features$ipd_neg))
-		| any(names(genomeSeq$pos) != names(genomeF$features$ipd_pos)) ){
+	if (any(names(genomeSeq$pos) != names(genomeSeq$neg)) | any(names(genomeF$features$ipd_pos) != names(genomeF$features$ipd_neg)) ){
 		cat('Error : refSeq of forward strand and negative strand should be the same\n')
 		return (NULL)
 	}
@@ -92,6 +91,39 @@ getContextEffectByPos <- function(genomeF, genomeSeq, left.len=6, right.len=1, m
 	}else{
 		return (list(context.effect=context.effect, context.ex = context.ex))	
 	}
+}
+
+
+mergeContextEffect <- function(context.effect.list)
+{
+	context.all <- character()
+	# get context union
+	for (i in 1:length(context.effect.list)){
+		context.all <- union(context.all, names(context.effect.list[[i]]))	
+	}
+
+	# get context effect union
+	idx <- which (!grepl('N',context.all))
+	context.effect.all <- list()
+	for (i in 1:length(idx)){
+		cur.context <- context.all[idx[i]]
+		context.effect.all[[cur.context]]$mean <- numeric(0)
+		context.effect.all[[cur.context]]$var <- numeric(0)
+		context.effect.all[[cur.context]]$len <- numeric(0)
+		for (j in 1:length(context.effect.list)){
+			context.effect.all[[cur.context]]$mean <- c(context.effect.all[[cur.context]]$mean,
+									context.effect.list[[j]][[cur.context]]$mean)
+			context.effect.all[[cur.context]]$var <- c(context.effect.all[[cur.context]]$var,
+                                                                        context.effect.list[[j]][[cur.context]]$var)
+			context.effect.all[[cur.context]]$len <- c(context.effect.all[[cur.context]]$len,
+                                                                        context.effect.list[[j]][[cur.context]]$len)
+		}
+		if (i == 100*floor(i/100)){
+			cat(i,'\r')
+		}	
+	}
+	cat(i,'\n')
+	context.effect.all
 }
 
 
