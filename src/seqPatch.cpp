@@ -138,6 +138,17 @@ vector<int> getAlnsIdxColIdx(SEXP RalnsIdxNames)
         return colIdx;
 
 }
+
+int getIdxByName (SEXP data, string query)
+{
+	SEXP names = Rf_getAttrib(data,R_NamesSymbol);
+	int len = Rf_length(names);
+	for (int i=0;i<len;i++){
+		string cur_name = CHAR(STRING_ELT(names,i));
+		if (cur_name == query) return i;
+	}
+	return -1;
+}
 RcppExport SEXP getFeaturesAlongGenome(SEXP RalnsF, SEXP RalnsIdx, SEXP RalnsFNames, SEXP RalnsIdxNames, SEXP RuseCCS)
 {
 
@@ -865,6 +876,79 @@ RcppExport SEXP getContextExByPosMerge(SEXP RcontextEx, SEXP RcontextExRefSeq, S
 
 }
 
+RcppExport SEXP mergeContextEffectSummary(SEXP RcontextEffect_1, SEXP RcontextEffect_2, SEXP Rcontext_1, SEXP Rcontext_2)
+{
+	// load context effect 1
+	map<string, map<string, vector<double> > > contextEffect_1;
+        if (!Rf_isNull(RcontextEffect_1)){
+                for (int i=0;i<Rf_length(RcontextEffect_1);i++){
+                        string cur_context = CHAR(STRING_ELT(Rcontext_1,i));
+                        map<string, vector<double > > cur_data;
+                        vector<double> tmp;
+                        cur_data["mean"] = tmp; cur_data["var"] = tmp; cur_data["len"] = tmp;
+                        SEXP cur_Rdata = VECTOR_ELT(RcontextEffect_1,i);
+                        double *dat;
+                        // get mean
+                        dat = REAL(VECTOR_ELT(cur_Rdata, getIdxByName(cur_Rdata, "mean") ));
+                        for (int j=0;j<Rf_length(VECTOR_ELT(cur_Rdata,0)); j++){cur_data["mean"].push_back(dat[j]);}
+                        // get var
+                        dat = REAL(VECTOR_ELT(cur_Rdata, getIdxByName(cur_Rdata, "var") ));
+                        for (int j=0;j<Rf_length(VECTOR_ELT(cur_Rdata,1)); j++){cur_data["var"].push_back(dat[j]);}
+                        // get len
+                        dat = REAL(VECTOR_ELT(cur_Rdata, getIdxByName(cur_Rdata, "len") ));
+                        for (int j=0;j<Rf_length(VECTOR_ELT(cur_Rdata,2)); j++){cur_data["len"].push_back(dat[j]);}
+                        contextEffect_1[cur_context] = cur_data;
+                }
+        }
+	
+	// load context effect 2
+        map<string, map<string, vector<double> > > contextEffect_2;
+        if (!Rf_isNull(RcontextEffect_2)){
+                for (int i=0;i<Rf_length(RcontextEffect_2);i++){
+                        string cur_context = CHAR(STRING_ELT(Rcontext_2,i));
+                        map<string, vector<double > > cur_data;
+                        vector<double> tmp;
+                        cur_data["mean"] = tmp; cur_data["var"] = tmp; cur_data["len"] = tmp;
+                        SEXP cur_Rdata = VECTOR_ELT(RcontextEffect_2,i);
+                        double *dat;
+                        // get mean
+                        dat = REAL(VECTOR_ELT(cur_Rdata, getIdxByName(cur_Rdata, "mean") ));
+                        for (int j=0;j<Rf_length(VECTOR_ELT(cur_Rdata,0)); j++){cur_data["mean"].push_back(dat[j]);}
+                        // get var
+                        dat = REAL(VECTOR_ELT(cur_Rdata, getIdxByName(cur_Rdata, "var") ));
+                        for (int j=0;j<Rf_length(VECTOR_ELT(cur_Rdata,1)); j++){cur_data["var"].push_back(dat[j]);}
+                        // get len
+                        dat = REAL(VECTOR_ELT(cur_Rdata, getIdxByName(cur_Rdata, "len") ));
+                        for (int j=0;j<Rf_length(VECTOR_ELT(cur_Rdata,2)); j++){cur_data["len"].push_back(dat[j]);}
+                        contextEffect_2[cur_context] = cur_data;
+                }
+        }
+	
+	// merge contextEffect_1 and contextEffect_2	
+	int Rcontext_2_len = Rf_length(Rcontext_2);
+	
+	for (int i=0;i<Rcontext_2_len;i++){
+                if ((i+1)%1000==0) Rprintf("merged %d contexts\r", i+1);
+		const string motif = CHAR(STRING_ELT(Rcontext_2,i));
+                map<string, vector<double> > &cur_contextEffect = contextEffect_2[motif];
+                // merge mean
+		for (int j=0; j<cur_contextEffect["mean"].size(); j++){
+			contextEffect_1[motif]["mean"].push_back(cur_contextEffect["mean"][j]);
+                }
+		// merge var
+		for (int j=0; j<cur_contextEffect["var"].size(); j++){
+                        contextEffect_1[motif]["var"].push_back(cur_contextEffect["var"][j]);
+                }
+		// merge len
+		for (int j=0; j<cur_contextEffect["len"].size(); j++){
+                        contextEffect_1[motif]["len"].push_back(cur_contextEffect["len"][j]);
+                }
+        }
+	Rprintf("merged %d contexts\n", Rcontext_2_len);
+	SEXP rl = Rcpp::wrap(contextEffect_1);
+	return rl;			
+}
+
 RcppExport SEXP correctTrendEffect(SEXP RalnsF, SEXP RtrendEffect)
 {
 	if (Rf_length(RalnsF) != Rf_length(RtrendEffect)){
@@ -986,13 +1070,13 @@ RcppExport SEXP hieModel_NC (SEXP Ripd_native, SEXP Rgenome_start_native, SEXP R
                         SEXP cur_Rdata = VECTOR_ELT(RcontextEffect,i);
                         double *dat;
                         // get mean
-                        dat = REAL(VECTOR_ELT(cur_Rdata,0));
+                        dat = REAL(VECTOR_ELT(cur_Rdata,getIdxByName(cur_Rdata, "mean") ));
                         for (int j=0;j<Rf_length(VECTOR_ELT(cur_Rdata,0)); j++){cur_data["mean"].push_back(dat[j]);}
                         // get var
-                        dat = REAL(VECTOR_ELT(cur_Rdata,1));
+                        dat = REAL(VECTOR_ELT(cur_Rdata,getIdxByName(cur_Rdata, "var") ));
                         for (int j=0;j<Rf_length(VECTOR_ELT(cur_Rdata,1)); j++){cur_data["var"].push_back(dat[j]);}
                         // get len
-                        dat = REAL(VECTOR_ELT(cur_Rdata,2));
+                        dat = REAL(VECTOR_ELT(cur_Rdata,getIdxByName(cur_Rdata, "len") ));
                         for (int j=0;j<Rf_length(VECTOR_ELT(cur_Rdata,2)); j++){cur_data["len"].push_back(dat[j]);}
                         contextEffect[cur_context] = cur_data;
                 }
@@ -1215,13 +1299,13 @@ RcppExport SEXP hieModel_CC (SEXP Ripd_native, SEXP Ripd_ctrl, SEXP Rgenome_star
                         SEXP cur_Rdata = VECTOR_ELT(RcontextEffect,i);
                         double *dat;
                         // get mean
-                        dat = REAL(VECTOR_ELT(cur_Rdata,0));
+                        dat = REAL(VECTOR_ELT(cur_Rdata, getIdxByName(cur_Rdata, "mean") ));
                         for (int j=0;j<Rf_length(VECTOR_ELT(cur_Rdata,0)); j++){cur_data["mean"].push_back(dat[j]);}
                         // get var
-                        dat = REAL(VECTOR_ELT(cur_Rdata,1));
+                        dat = REAL(VECTOR_ELT(cur_Rdata, getIdxByName(cur_Rdata, "var") ));
                         for (int j=0;j<Rf_length(VECTOR_ELT(cur_Rdata,1)); j++){cur_data["var"].push_back(dat[j]);}
                         // get len
-                        dat = REAL(VECTOR_ELT(cur_Rdata,2));
+                        dat = REAL(VECTOR_ELT(cur_Rdata, getIdxByName(cur_Rdata, "len") ));
                         for (int j=0;j<Rf_length(VECTOR_ELT(cur_Rdata,2)); j++){cur_data["len"].push_back(dat[j]);}
                         contextEffect[cur_context] = cur_data;
                 }
@@ -1774,8 +1858,6 @@ RcppExport SEXP mergeGenomeF(SEXP Rdata_list, SEXP Rgenome_start_list, SEXP Rgen
 
 
 
-
-
 RcppExport SEXP testFindMaxContextIndex(SEXP Rcur_context, SEXP Rex_ref, SEXP Ripd_ref)
 {
 	string cur_context = CHAR(STRING_ELT(Rcur_context,0));
@@ -1972,4 +2054,11 @@ RcppExport SEXP testloadContextEffect(SEXP RcontextEffect, SEXP Rcontext)
         }
 	return Rcpp::wrap(contextEffect);
 }
+
+RcppExport SEXP testGetIdxByName(SEXP data, SEXP Rquery)
+{
+	string query = CHAR(STRING_ELT(Rquery,0) );
+	return Rcpp::wrap(getIdxByName(data,query));
+}
+
 

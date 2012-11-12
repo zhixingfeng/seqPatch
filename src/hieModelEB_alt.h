@@ -26,8 +26,8 @@ double evalLogLikeliHood_alt(double mu0, double kappa0, double upsilon0, double 
 }
 
 vector<double> hyperParaEstimate_alt (double y_bar_native, double s2_native, double n_native, vector<double> &y_bar, vector<double> &s2,
-				 vector <double> &n, double mu0, double kappa0, double upsilon0, double sigma0, int max_iter=20,
-				 double min_change=0.01)
+				 vector <double> &n, double mu0, double kappa0, double upsilon0, double sigma0, int max_iter=10,
+				 double min_change=0.02)
 {
     	int k = (int) y_bar.size();
 
@@ -115,7 +115,7 @@ vector<double> hyperParaEstimate_alt (double y_bar_native, double s2_native, dou
     	result.push_back(sigma0);
     	return result;
 }
-map<string, vector<double> > hieModelEB_alt(vector<double> & data_native, vector<double> & ipd_ref_mean, vector<double> & ipd_ref_var, vector<double> & ipd_ref_len, int max_iter=20)
+map<string, vector<double> > hieModelEB_alt(vector<double> & data_native, vector<double> & ipd_ref_mean, vector<double> & ipd_ref_var, vector<double> & ipd_ref_len, int max_iter=10)
 {
     	vector <double> sampleSize = ipd_ref_len;
 	double sampleSize_native = data_native.size();

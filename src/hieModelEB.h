@@ -26,7 +26,7 @@ double evalLogLikeliHood(double mu0, double kappa0, double upsilon0, double sigm
 }
 
 vector<double> hyperParaEstimate (vector<double> y_bar, vector<double> s2, vector <double> n,
-                                  double mu0, double kappa0, double upsilon0, double sigma0, int max_iter=20, double min_change=0.01)
+                                  double mu0, double kappa0, double upsilon0, double sigma0, int max_iter=10, double min_change=0.02)
 {
     int k = (int) y_bar.size();
 
@@ -139,7 +139,7 @@ double getLogLikelihood_marginal(vector<double> & ipd_ref_mean, vector<double> &
 }
 
 map<string, vector<double> > hieModelEB(vector<double> & ipd_ref_mean, vector<double> & ipd_ref_var,
-                                vector<double> & ipd_ref_len, int max_iter=20)
+                                vector<double> & ipd_ref_len, int max_iter=10)
 {
     vector <double> sampleSize = ipd_ref_len;
 
