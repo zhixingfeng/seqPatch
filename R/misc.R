@@ -1,3 +1,62 @@
+getStatByIdx <- function(detection, idx.sel, stat='LR_log')
+{
+	# forward strand
+	rl <- list()
+	rl$pos <- list()
+	for (i in 1:length(idx.sel$pos)){
+		cur.ref <- names(idx.sel$pos[i])
+		cur.idx <- idx.sel$pos[[i]] - detection$genome.start.pos[[cur.ref]] + 1
+		cur.idx <- cur.idx[cur.idx>=1]
+		rl$pos[[cur.ref]] <- detection$pos[[cur.ref]][[stat]][cur.idx] 
+	}
+	
+	# backward strand 	
+	rl$neg <- list()
+        for (i in 1:length(idx.sel$neg)){
+                cur.ref <- names(idx.sel$neg[i])
+		cur.idx <- idx.sel$neg[[i]] - detection$genome.start.neg[[cur.ref]] + 1
+                cur.idx <- cur.idx[cur.idx>=1]
+                rl$neg[[cur.ref]] <- detection$neg[[cur.ref]][[stat]][cur.idx]
+        }
+	rl 
+}
+
+
+getRegionByCutoff <- function(detection, cutoff, idx.sel=NULL, stat='LR_log', method='less')
+{
+	idx <- list()
+	idx$pos <- list()
+	idx$neg <- list()
+
+	# forward strand
+	for (i in 1:length(detection$pos)){
+		cur.ref <- names(detection$pos[i])
+		if (method=='less'){
+			idx$pos[[cur.ref]] <- detection$genome.start.pos[[i]] - 1 + which(detection$pos[[i]][[stat]]<=cutoff)
+		}else{ 
+			idx$pos[[cur.ref]] <- detection$genome.start.pos[[i]] - 1 + which(detection$pos[[i]][[stat]]>cutoff)
+		}
+		if (!is.null(idx.sel)){
+			 idx$pos[[cur.ref]] <- intersect(idx$pos[[cur.ref]], idx.sel$pos[[cur.ref]] )
+		}
+	}				
+	# backward strand	
+	for (i in 1:length(detection$neg)){
+                cur.ref <- names(detection$neg[i])
+                if (method=='less'){
+                        idx$neg[[cur.ref]] <- detection$genome.start.neg[[i]] - 1 + which(detection$neg[[i]][[stat]]<=cutoff)
+                }else{
+                        idx$neg[[cur.ref]] <- detection$genome.start.neg[[i]] - 1 + which(detection$neg[[i]][[stat]]>cutoff)
+                }
+                if (!is.null(idx.sel)){
+                         idx$neg[[cur.ref]] <- intersect(idx$neg[[cur.ref]], idx.sel$neg[[cur.ref]] )
+                }
+        }
+	idx
+}
+
+
+
 getR2OfContextEffect <- function(context.effect.mean)
 {
 	mean.all <- sum(sapply(context.effect.mean, sum)) / sum(sapply(context.effect.mean, length))
