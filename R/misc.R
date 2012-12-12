@@ -1,3 +1,116 @@
+plotLR_log_density <- function(LR, LR.flank, file.name, xlim=NULL)
+{
+        den.motif <- density(LR$LR_log, na.rm=TRUE)
+        den.flank <- density(LR.flank$LR_log, na.rm=TRUE)
+        png(file.name, type='cairo')
+                if (is.null(xlim)) xlim = range(den.motif$x,den.flank$x)
+                plot(den.motif, col='red', xlim=xlim, main='',
+                        ylim=range(den.motif$y, den.flank$y), xlab='log likelihood ratio')
+                lines(den.flank, col='blue')
+        dev.off()
+}
+
+map_genome_locus <- function(idx, map, value, val.name)
+{
+        if ( any(sort(names(idx$pos))!=sort(names(value$pos))) )
+                stop('inconsistent names.')
+        rl <- list(); rl$pos <- list(); rl$neg <- list()
+
+        # forward strand
+        for (i in 1:length(idx$pos) ){
+                if (length(idx$pos[[i]]) == 0 ) next
+                cur.name <- names(idx$pos[i])
+                cur.idx <- idx$pos[[i]]
+                cur.value <- value$pos[[i]]
+                cur.map <- map[[cur.name]]
+                if (is.null(cur.map)) next
+
+                rl$pos[[cur.name]] <- list()
+                rl$pos[[cur.name]]$idx <- numeric(0)
+                rl$pos[[cur.name]]$hit.name <- character(0)
+                rl$pos[[cur.name]]$hit.idx <- numeric(0)
+                rl$pos[[cur.name]]$strand <- numeric(0)
+                rl$pos[[cur.name]][[val.name]] <- numeric(0)
+
+                if (length(cur.idx)!=length(cur.value)) stop('inconsistent idx and value.')
+                for (j in 1:length(cur.idx)){
+                        hit.ref <- which(cur.idx[j] == cur.map[,1])
+                        if (length(hit.ref)==0) next
+                        rl$pos[[cur.name]]$idx <- c(rl$pos[[cur.name]]$idx, cur.idx[j])
+                        rl$pos[[cur.name]]$hit.name <- c(rl$pos[[cur.name]]$hit.name, as.character(cur.map[hit.ref,2]) )
+                        rl$pos[[cur.name]]$hit.idx <- c(rl$pos[[cur.name]]$hit.idx, as.numeric(cur.map[hit.ref,3]) )
+                        rl$pos[[cur.name]]$strand <- c(rl$pos[[cur.name]]$strand, as.character(cur.map[hit.ref,4]))
+                        rl$pos[[cur.name]][[val.name]] <- c(rl$pos[[cur.name]][[val.name]], cur.value[j])
+                }
+		if (length(rl$pos[[cur.name]]$idx) == 0) rl$pos[[cur.name]] <- NULL
+        }
+
+	# backward strand
+        for (i in 1:length(idx$neg) ){
+                if (length(idx$neg[[i]]) == 0 ) next
+                cur.name <- names(idx$neg[i])
+                cur.idx <- idx$neg[[i]]
+                cur.value <- value$neg[[i]]
+                cur.map <- map[[cur.name]]
+                if (is.null(cur.map)) next
+
+                rl$neg[[cur.name]] <- list()
+                rl$neg[[cur.name]]$idx <- numeric(0)
+                rl$neg[[cur.name]]$hit.name <- character(0)
+                rl$neg[[cur.name]]$hit.idx <- numeric(0)
+                rl$neg[[cur.name]]$strand <- numeric(0)
+                rl$neg[[cur.name]][[val.name]] <- numeric(0)
+
+                if (length(cur.idx)!=length(cur.value)) stop('inconsistent idx and value.')
+                for (j in 1:length(cur.idx)){
+                        hit.ref <- which(cur.idx[j] == cur.map[,1])
+                        if (length(hit.ref)==0) next
+                        rl$neg[[cur.name]]$idx <- c(rl$neg[[cur.name]]$idx, cur.idx[j])
+                        rl$neg[[cur.name]]$hit.name <- c(rl$neg[[cur.name]]$hit.name, as.character(cur.map[hit.ref,2]) )
+                        rl$neg[[cur.name]]$hit.idx <- c(rl$neg[[cur.name]]$hit.idx, as.numeric(cur.map[hit.ref,3]) )
+                        rl$neg[[cur.name]]$strand <- c(rl$neg[[cur.name]]$strand, as.character(cur.map[hit.ref,4]))
+                        rl$neg[[cur.name]][[val.name]] <- c(rl$neg[[cur.name]][[val.name]], cur.value[j])
+                }
+		if (length(rl$neg[[cur.name]]$idx) == 0) rl$neg[[cur.name]] <- NULL
+
+        }
+
+	rl
+}
+
+
+
+
+mergeLR_log <- function(detection, idx.list)
+{
+	LR_log_pos <- numeric(0)
+	LR_log_neg <- numeric(0)
+
+	if ( any(names(idx.list$pos)!=names(idx.list$neg)) ) stop('inconsistent chromosome.')
+
+	for (i in 1:length(idx.list$pos)){
+        	cur.ref <- names(idx.list$pos[i])
+
+        	# forward
+        	idx <- idx.list$pos[[i]] - detection$genome.start.pos[[cur.ref]] + 1
+        	idx <- idx[idx>=1]
+        	cur.LR <- detection$pos[[cur.ref]]$LR_log[idx]
+        	LR_log_pos <- c(LR_log_pos, cur.LR)
+
+        	# backward
+        	idx <- idx.list$neg[[i]] - detection$genome.start.neg[[cur.ref]] + 1
+        	idx <- idx[idx>=1]
+        	cur.LR <- detection$neg[[cur.ref]]$LR_log[idx]
+        	LR_log_neg <- c(LR_log_neg, cur.LR)
+	}
+	rl <- list()
+	rl$LR_log_pos <- LR_log_pos
+	rl$LR_log_neg <- LR_log_neg
+	rl$LR_log <- c(LR_log_pos, LR_log_neg)
+	rl 
+	
+}
+
 getStatByIdx <- function(detection, idx.sel, stat='LR_log')
 {
 	# forward strand

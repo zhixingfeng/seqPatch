@@ -1,4 +1,4 @@
-loadCmpH5toGenomeF <- function(cmpH5.file, out.dir, n.chunk, normalization.method='bySubread', is.use.CCS=FALSE)
+loadCmpH5toGenomeF <- function(cmpH5.file, out.dir, n.chunk=10, normalization.method='bySubread', is.use.CCS=FALSE)
 {
 	cmpH5 <- PacBioCmpH5(cmpH5.file)
 	alnsIdx <- alnIndex(cmpH5)
