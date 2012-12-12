@@ -45,7 +45,8 @@ loadCmpH5toGenomeF <- function(cmpH5.file, out.dir, n.chunk=10, normalization.me
 	genomeF	<- mergeGenomeF(genomeF.list)	
 	save(genomeF, file= paste(out.dir,'/genomeF.Rdata',sep=''))
 	print('finished')
-
+	rm (genomeF.list);gc()
+	genomeF
 }
 
 

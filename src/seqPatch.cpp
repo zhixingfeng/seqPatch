@@ -193,11 +193,11 @@ RcppExport SEXP getFeaturesAlongGenome(SEXP RalnsF, SEXP RalnsIdx, SEXP RalnsFNa
 			string ref = CHAR(STRING_ELT(R_ref,j));
 			if (ref!="-")
 				temp_len++;
-			// remove the data besides indels
+			// remove the data besides indels and mismatachs 
 			if (j>=1){
 				string read_pre = CHAR(STRING_ELT(R_read,j-1));
                                 string ref_pre = CHAR(STRING_ELT(R_ref,j-1));
-                                if (read=="-"||ref=="-"||read_pre=="-"||ref_pre=="-")
+                                if (read=="-"||ref=="-"||read_pre=="-"||ref_pre=="-"||read!=ref)
                                 	continue;
 			}
 			/*if (j==0){
