@@ -28,6 +28,9 @@ Install seqPatch
 ================
 R CMD INSTALL downloaded_folder_name
 
+A real example
+==============
+http://www.pacificbiosciences.com/devnet/files/datasets/secondary-analysis/seqpatch-plos-cb/example_release.tgz
 
 
 
