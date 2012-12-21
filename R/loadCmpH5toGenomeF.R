@@ -1,4 +1,4 @@
-loadCmpH5toGenomeF <- function(cmpH5.file, out.dir, n.chunk=10, normalization.method='bySubread', is.use.CCS=FALSE)
+loadCmpH5toGenomeF <- function(cmpH5.file, out.dir, n.chunk=10, normalization.method='bySubread', is.use.CCS=FALSE, is.return=FALSE)
 {
 	cmpH5 <- PacBioCmpH5(cmpH5.file)
 	alnsIdx <- alnIndex(cmpH5)
@@ -46,7 +46,8 @@ loadCmpH5toGenomeF <- function(cmpH5.file, out.dir, n.chunk=10, normalization.me
 	save(genomeF, file= paste(out.dir,'/genomeF.Rdata',sep=''))
 	print('finished')
 	rm (genomeF.list);gc()
-	genomeF
+	if (is.return==TRUE)
+		genomeF
 }
 
 
