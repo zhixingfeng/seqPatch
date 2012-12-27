@@ -1,7 +1,6 @@
 #ifndef MATHOPT_H
 #define MATHOPT_H
 
-
 double max_elt(double *data, int len)
 {
 	double max_value = data[0];
@@ -40,7 +39,6 @@ int min_elt(int *data, int len)
         }
         return min_value;
 }
-
 
 
 
