@@ -18,10 +18,28 @@ RcppExport SEXP R_API_BayesianMixtureModel (SEXP R_IPD, SEXP R_idx, SEXP R_theta
 	BayesianMixtureModelObj.run();		
 	
 
+	return Rcpp::List::create(Rcpp::Named("theta_0_t")=Rcpp::wrap(BayesianMixtureModelObj.get_theta_0_t_track()),
+				Rcpp::Named("kappa_0_t")=Rcpp::wrap(BayesianMixtureModelObj.get_kappa_0_t_track()),
+	 			Rcpp::Named("upsilon_0_t")=Rcpp::wrap(BayesianMixtureModelObj.get_upsilon_0_t_track()),
+				Rcpp::Named("tau2_0_t")=Rcpp::wrap(BayesianMixtureModelObj.get_tau2_0_t_track()),
+				Rcpp::Named("N_0_t")=Rcpp::wrap(BayesianMixtureModelObj.get_N_0_t_track()),
+				Rcpp::Named("N_gamma_0_t")=Rcpp::wrap(BayesianMixtureModelObj.get_N_gamma_0_t_track()),
+
+				Rcpp::Named("theta_1_t")=Rcpp::wrap(BayesianMixtureModelObj.get_theta_1_t_track()),
+                                Rcpp::Named("kappa_1_t")=Rcpp::wrap(BayesianMixtureModelObj.get_kappa_1_t_track()),
+                                Rcpp::Named("upsilon_1_t")=Rcpp::wrap(BayesianMixtureModelObj.get_upsilon_1_t_track()),
+                                Rcpp::Named("tau2_1_t")=Rcpp::wrap(BayesianMixtureModelObj.get_tau2_1_t_track()),
+                                Rcpp::Named("N_1_t")=Rcpp::wrap(BayesianMixtureModelObj.get_N_1_t_track()),
+                                Rcpp::Named("N_gamma_1_t")=Rcpp::wrap(BayesianMixtureModelObj.get_N_gamma_1_t_track()),
 		
-	return Rcpp::List::create(Rcpp::Named("ipd_avg")=Rcpp::wrap(BayesianMixtureModelObj.get_ipd_avg()),
-		 Rcpp::Named("ipd_n")=Rcpp::wrap(BayesianMixtureModelObj.get_ipd_n() ));	
-        return R_NilValue;
+				Rcpp::Named("gamma_0")=Rcpp::wrap(BayesianMixtureModelObj.get_gamma_0()),
+				Rcpp::Named("gamma_1")=Rcpp::wrap(BayesianMixtureModelObj.get_gamma_1()));		
+
+//	return Rcpp::List::create(Rcpp::Named("ipd_avg")=Rcpp::wrap(BayesianMixtureModelObj.get_ipd_avg()),
+//		 Rcpp::Named("ipd_n")=Rcpp::wrap(BayesianMixtureModelObj.get_ipd_n() ));	
+  
+	
+      	return R_NilValue;
 }
 
 RcppExport SEXP DetectModProp_NC(SEXP R_IPD, SEXP R_idx)

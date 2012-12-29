@@ -29,7 +29,7 @@ bool BayesianMixtureModel::getMoleculeMeanIPD(double *ipd, double *idx, int len_
         }
 	
 	if (ipd_avg.size()!=ipd_n.size()){printf("run error: size of ipd_avg and ipd_n should be the same."); return false;}
-        int T = (int) ipd_avg.size();
+        T = (int) ipd_avg.size();
 	gamma_0.insert(gamma_0.end(), T, -1);
 	gamma_1.insert(gamma_1.end(), T, -1);	
 	return true;
@@ -60,7 +60,7 @@ bool BayesianMixtureModel_NC::run(int max_iter)
 			E_var_norm_1 = 1/kappa_1_t[t-1] + pow(theta_1_t[t-1] - ipd_avg[i], 2)/tau2_1_t[t-1];
 			rho_0 = exp(E_log_1_p - E_var_norm_0 - E_log_sigma2_0);
 			rho_1 = exp(E_log_p - E_var_norm_1 - E_log_sigma2_1);
-			
+			//printf("rho_0:%lf, rho_1:%lf \n", rho_0, rho_1);			
 			// estimate gamma_0 and gamma_1
 			gamma_0[i] = rho_0 / (rho_0 + rho_1);
 			gamma_1[i] = 1 - gamma_0[i];
@@ -123,7 +123,16 @@ bool BayesianMixtureModel_NC::run(int max_iter)
                         cur_tau2_1_t = (N_S2_1_tilde + upsilon_1*tau2_1 +
                                 kappa_1*cur_N_gamma_1*(N_y_1_tilde/cur_N_gamma_1 - theta_1)*(N_y_1_tilde/cur_N_gamma_1 - theta_1)/cur_kappa_1_t)/cur_upsilon_1_t;
 		
-		
+		theta_0_t.push_back(cur_theta_0_t);	
+		kappa_0_t.push_back(cur_kappa_0_t);
+		upsilon_0_t.push_back(cur_upsilon_0_t);	
+		tau2_0_t.push_back(cur_tau2_0_t);
+
+		theta_1_t.push_back(cur_theta_1_t);
+                kappa_1_t.push_back(cur_kappa_1_t);
+                upsilon_1_t.push_back(cur_upsilon_1_t);
+                tau2_1_t.push_back(cur_tau2_1_t);
+
 	}
 
 	// lock 
