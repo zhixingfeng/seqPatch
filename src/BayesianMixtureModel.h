@@ -3,15 +3,15 @@
 #include "SpecialFuns.h"
 #include "stl.h"
 #define ERR 1e-10
+
 class BayesianMixtureModel
 {
 	public:
 		BayesianMixtureModel()
 		{
 			// default hyperparameters
-			theta_0 = -2; kappa_0 = 1; upsilon_0 = 4.001; tau2_0 = 1000;
-			theta_1 = 2; kappa_1 = 1; upsilon_1 = 4.001; tau2_1 = 1000;
-			
+			theta_0 = -2; kappa_0 = 0.0001; upsilon_0 = 0.0001; tau2_0 = 1;
+			theta_1 = 2; kappa_1 = 0.0001; upsilon_1 = 0.0001; tau2_1 = 1;
 			// lock 
 			lock = true;
 		}	
@@ -37,8 +37,8 @@ class BayesianMixtureModel
 			theta_0_t.push_back(theta_0); kappa_0_t.push_back(kappa_0);
         		upsilon_0_t.push_back(upsilon_0); tau2_0_t.push_back(tau2_0);
 
-        		theta_1_t.push_back(theta_1); kappa_1_t.push_back(kappa_1);
-        		upsilon_1_t.push_back(upsilon_1); tau2_1_t.push_back(tau2_1);
+        		theta_1_t.push_back(theta_1); kappa_1_t.push_back(kappa_0);
+        		upsilon_1_t.push_back(upsilon_0); tau2_1_t.push_back(tau2_0);
 
         		N_0_t.push_back(0); N_gamma_0_t.push_back(0);
         		N_1_t.push_back(0); N_gamma_1_t.push_back(0);
@@ -51,7 +51,8 @@ class BayesianMixtureModel
 		// get data
 		vector<double> get_ipd_avg(){return ipd_avg;}
 		vector<double> get_ipd_n(){return ipd_n;}
-		
+		vector<double> get_ipd_var(){return ipd_var;}
+
 		// get tracked distribution parameters
 		vector<double> get_theta_0_t_track(){return theta_0_t;}
 		vector<double> get_theta_1_t_track(){return theta_1_t;}
@@ -125,7 +126,7 @@ class BayesianMixtureModel
 		// data (average IPD of each molecule and number of IPD of each molecule)
 		vector<double> ipd_avg;
 		vector<double> ipd_n;
-
+		vector<double> ipd_var;
 		// number of moelcules
 		double T;
 	
@@ -138,7 +139,7 @@ class BayesianMixtureModel
 class BayesianMixtureModel_NC: public BayesianMixtureModel
 {
 	public:
-		bool run(int max_iter=100);	
+		bool run(int max_iter=10);	
 	
 };
 

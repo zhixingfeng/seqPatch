@@ -7,28 +7,42 @@ bool BayesianMixtureModel::getMoleculeMeanIPD(double *ipd, double *idx, int len_
         pair<map<int,double>::iterator,bool> ret;
         map<int, double> ipd_sum_map;
         map<int, double> ipd_n_map;
-        for (int i=0;i<len;i++){
+	map<int, double> ipd_var_map;        
+	for (int i=0;i<len;i++){
                 ret = ipd_sum_map.insert(pair<int, double>(int(idx[i]),ipd[i]));
                 if (ret.second==true){
                         ipd_n_map.insert(pair<int, double>(int(idx[i]),1));
+			ipd_var_map.insert(pair<int, double>(int(idx[i]),ipd[i]*ipd[i]));
                 }else{
                         ret.first->second += ipd[i];
                         ipd_n_map[int(idx[i])] += 1;
+			ipd_var_map[int(idx[i])] += ipd[i]*ipd[i];
                 }
         }
 
         ipd_avg.clear();
         ipd_n.clear();
+	ipd_var.clear();
         map<int, double>::iterator it_avg = ipd_sum_map.begin();
         map<int, double>::iterator it_n = ipd_n_map.begin();
+        map<int, double>::iterator it_var = ipd_var_map.begin();
+
         while(it_avg!=ipd_sum_map.end()){
-                ipd_avg.push_back(it_avg->second / it_n->second);
-                ipd_n.push_back(it_n->second);
-                it_avg++;
+                double cur_n = it_n->second;
+		double cur_avg = it_avg->second / cur_n;
+		ipd_avg.push_back(cur_avg);
+                ipd_n.push_back(cur_n);
+                ipd_var.push_back(it_var->second / cur_n - cur_avg*cur_avg);
+		it_avg++;
                 it_n++;
-        }
+        	it_var++;
+	}
 	
-	if (ipd_avg.size()!=ipd_n.size()){printf("run error: size of ipd_avg and ipd_n should be the same."); return false;}
+	if ( !(ipd_avg.size()==ipd_n.size()&&ipd_n.size()==ipd_var.size()) ){
+		printf("run error: size of ipd_avg, ipd_n and ipd_var should be the same."); 
+		return false;
+	}
+	
         T = (int) ipd_avg.size();
 	gamma_0.insert(gamma_0.end(), T, -1);
 	gamma_1.insert(gamma_1.end(), T, -1);	
@@ -38,33 +52,50 @@ bool BayesianMixtureModel::getMoleculeMeanIPD(double *ipd, double *idx, int len_
 bool BayesianMixtureModel_NC::run(int max_iter)
 {
 	if (lock==true){printf("run() is locked. rerun setHyperParametersNull()."); return false;}
+
 	/*----------variational inference----------*/		
 	for (int t=1;t<=max_iter;t++){
 		// estimate q_delta (i.e. estimate gamma_0 and gamma_1)
 		double E_log_1_p = digamma(N_0_t[t-1] + 1) - digamma(N_0_t[t-1] + N_1_t[t-1] + 2);
 		double E_log_p = digamma(N_1_t[t-1] + 1) - digamma(N_0_t[t-1] + N_1_t[t-1] + 2);
+
 		double E_log_sigma2_0 = log(upsilon_0_t[t-1]*tau2_0_t[t-1]/2) - digamma(upsilon_0_t[t-1]/2);
 		double E_log_sigma2_1 = log(upsilon_1_t[t-1]*tau2_1_t[t-1]/2) - digamma(upsilon_1_t[t-1]/2);	
 		
 		double E_var_norm_0; double E_var_norm_1;
-		double rho_0; double rho_1;
+		double log_rho_0; double log_rho_1;
 
 		double cur_N_0 = 0; double cur_N_1 = 0;
 		double cur_N_gamma_0 = 0; double cur_N_gamma_1 = 0;
 	
 		double N_y_0_tilde = 0; double N_y_1_tilde = 0;
 		double N_S2_0_tilde = 0; double N_S2_1_tilde = 0;
-		
+		double N_S2_0_bar = 0; double N_S2_1_bar = 0;	
+	
 		for (int i=0;i<T;i++){
-			E_var_norm_0 = 1/kappa_0_t[t-1] + pow(theta_0_t[t-1] - ipd_avg[i], 2)/tau2_0_t[t-1];
-			E_var_norm_1 = 1/kappa_1_t[t-1] + pow(theta_1_t[t-1] - ipd_avg[i], 2)/tau2_1_t[t-1];
-			rho_0 = exp(E_log_1_p - E_var_norm_0 - E_log_sigma2_0);
-			rho_1 = exp(E_log_p - E_var_norm_1 - E_log_sigma2_1);
-			//printf("rho_0:%lf, rho_1:%lf \n", rho_0, rho_1);			
-			// estimate gamma_0 and gamma_1
-			gamma_0[i] = rho_0 / (rho_0 + rho_1);
-			gamma_1[i] = 1 - gamma_0[i];
+			E_var_norm_0 = 1/kappa_0_t[t-1] + (pow(theta_0_t[t-1] - ipd_avg[i], 2) + ipd_var[i])/tau2_0_t[t-1];
+			E_var_norm_1 = 1/kappa_1_t[t-1] + (pow(theta_1_t[t-1] - ipd_avg[i], 2) + ipd_var[i])/tau2_1_t[t-1];
+			//printf("E_var_norm_0 : %lf\n", E_var_norm_0);
 			
+			//rho_0 = exp(E_log_1_p - E_var_norm_0 - E_log_sigma2_0);
+			//rho_1 = exp(E_log_p - E_var_norm_1 - E_log_sigma2_1);
+			//printf("rho_0:%lf, rho_1:%lf \n", rho_0, rho_1);			
+			log_rho_0 = E_log_1_p - E_var_norm_0 - E_log_sigma2_0;
+			log_rho_1 = E_log_p - E_var_norm_1 - E_log_sigma2_1;
+
+			// estimate gamma_0 and gamma_1
+			//gamma_0[i] = rho_0 / (rho_0 + rho_1);
+			//gamma_1[i] = 1 - gamma_0[i];
+			if (log_rho_1 - log_rho_0 >= 40)
+				gamma_0[i] = 0;
+			else 
+				gamma_0[i] = 1 / (1 + exp(log_rho_1 - log_rho_0) );
+			if (log_rho_0 - log_rho_1 >= 40)	
+				gamma_1[i] = 0;
+			else 
+				gamma_1[i] = 1 / (1 + exp(log_rho_0 - log_rho_1) );
+			
+
 			// get N_0 and N_1
 			cur_N_0 += gamma_0[i]; 
 			cur_N_1 += gamma_1[i];
@@ -84,16 +115,22 @@ bool BayesianMixtureModel_NC::run(int max_iter)
 			// get S2_0_tilde and S2_1_tilde
 			N_S2_0_tilde += N_y_0_tilde_i*ipd_avg[i];
 			N_S2_1_tilde += N_y_1_tilde_i*ipd_avg[i];
+			
+			// get S2_0_bar and S2_1_bar
+			N_S2_0_bar += cur_N_gamma_0_i*ipd_var[i];
+			N_S2_1_bar += cur_N_gamma_1_i*ipd_var[i];
+			//printf("ipd_var : %lf, cur_N_gamma_0_i : %lf, cur_N_gamma_1_i : %lf \n", ipd_var[i], cur_N_gamma_0_i, cur_N_gamma_1_i);
+
 		}
 		if (cur_N_gamma_0 <= ERR)
 			N_S2_0_tilde = ERR;
 		else 
-			N_S2_0_tilde = N_S2_0_tilde - N_y_0_tilde*N_y_0_tilde/N_y_0_tilde;
+			N_S2_0_tilde = N_S2_0_tilde - N_y_0_tilde*N_y_0_tilde/cur_N_gamma_0;
 
 		if (cur_N_gamma_1 <= ERR)
                         N_S2_1_tilde = ERR;
                 else
-                        N_S2_1_tilde = N_S2_1_tilde - N_y_1_tilde*N_y_1_tilde/N_y_1_tilde;
+                        N_S2_1_tilde = N_S2_1_tilde - N_y_1_tilde*N_y_1_tilde/cur_N_gamma_1;
 
 		// estimate q_p (i.e. estimate N_0 and N_1)
 		N_0_t.push_back(cur_N_0);
@@ -105,24 +142,25 @@ bool BayesianMixtureModel_NC::run(int max_iter)
 
 		double cur_kappa_0_t = kappa_0 + cur_N_gamma_0;
 		double cur_theta_0_t = (N_y_0_tilde + kappa_0*theta_0)/cur_kappa_0_t;
-		double cur_upsilon_0_t = upsilon_0 + cur_N_0;
+		double cur_upsilon_0_t = upsilon_0 + cur_N_gamma_0;
 		double cur_tau2_0_t;
 		if (cur_N_gamma_0 <= ERR)
-			cur_tau2_0_t = upsilon_0*tau2_0/cur_upsilon_0_t;
+			cur_tau2_0_t = tau2_0;
 		else 
-			cur_tau2_0_t = (N_S2_0_tilde + upsilon_0*tau2_0 + 
+			cur_tau2_0_t = (N_S2_0_tilde + N_S2_0_bar + upsilon_0*tau2_0 + 
 				kappa_0*cur_N_gamma_0*(N_y_0_tilde/cur_N_gamma_0 - theta_0)*(N_y_0_tilde/cur_N_gamma_0 - theta_0)/cur_kappa_0_t)/cur_upsilon_0_t;
 	
 		double cur_kappa_1_t = kappa_1 + cur_N_gamma_1;
                 double cur_theta_1_t = (N_y_1_tilde + kappa_1*theta_1)/cur_kappa_1_t;
-                double cur_upsilon_1_t = upsilon_1 + cur_N_1;
+                double cur_upsilon_1_t = upsilon_1 + cur_N_gamma_1;
                 double cur_tau2_1_t;
                 if (cur_N_gamma_1 <= ERR)
-                        cur_tau2_1_t = upsilon_1*tau2_1/cur_upsilon_1_t;
+                        cur_tau2_1_t = tau2_1;
                 else
-                        cur_tau2_1_t = (N_S2_1_tilde + upsilon_1*tau2_1 +
+                        cur_tau2_1_t = (N_S2_1_tilde + N_S2_1_bar + upsilon_1*tau2_1 +
                                 kappa_1*cur_N_gamma_1*(N_y_1_tilde/cur_N_gamma_1 - theta_1)*(N_y_1_tilde/cur_N_gamma_1 - theta_1)/cur_kappa_1_t)/cur_upsilon_1_t;
-		
+	
+		//printf("N_S2_0_bar : %lf, N_S2_1_bar : %lf\n", N_S2_0_bar, N_S2_1_bar);	
 		theta_0_t.push_back(cur_theta_0_t);	
 		kappa_0_t.push_back(cur_kappa_0_t);
 		upsilon_0_t.push_back(cur_upsilon_0_t);	

@@ -5,6 +5,7 @@
 #include "SpecialFuns.h"
 #include "BayesianMixtureModel.h"
 
+
 using namespace std;
 using namespace Rcpp;
 string SP_reverseSeq(const string &seq);
@@ -15,7 +16,7 @@ RcppExport SEXP R_API_BayesianMixtureModel (SEXP R_IPD, SEXP R_idx, SEXP R_theta
 	BayesianMixtureModel_NC BayesianMixtureModelObj;
 	BayesianMixtureModelObj.setHyperParametersNull(REAL(R_theta_0)[0], REAL(R_kappa_0)[0], REAL(R_upsilon_0)[0], REAL(R_tau2_0)[0]);
 	BayesianMixtureModelObj.getMoleculeMeanIPD(REAL(R_IPD), REAL(R_idx), Rf_length(R_IPD), Rf_length(R_idx));
-	BayesianMixtureModelObj.run();		
+	BayesianMixtureModelObj.run(INTEGER(R_max_iter)[0]);		
 	
 
 	return Rcpp::List::create(Rcpp::Named("theta_0_t")=Rcpp::wrap(BayesianMixtureModelObj.get_theta_0_t_track()),
@@ -35,10 +36,12 @@ RcppExport SEXP R_API_BayesianMixtureModel (SEXP R_IPD, SEXP R_idx, SEXP R_theta
 				Rcpp::Named("gamma_0")=Rcpp::wrap(BayesianMixtureModelObj.get_gamma_0()),
 				Rcpp::Named("gamma_1")=Rcpp::wrap(BayesianMixtureModelObj.get_gamma_1()));		
 
-//	return Rcpp::List::create(Rcpp::Named("ipd_avg")=Rcpp::wrap(BayesianMixtureModelObj.get_ipd_avg()),
-//		 Rcpp::Named("ipd_n")=Rcpp::wrap(BayesianMixtureModelObj.get_ipd_n() ));	
+/*
+	return Rcpp::List::create(Rcpp::Named("ipd_avg")=Rcpp::wrap(BayesianMixtureModelObj.get_ipd_avg()),
+		Rcpp::Named("ipd_n")=Rcpp::wrap(BayesianMixtureModelObj.get_ipd_n()), 
+		Rcpp::Named("ipd_var")=Rcpp::wrap(BayesianMixtureModelObj.get_ipd_var()));	
   
-	
+*/	
       	return R_NilValue;
 }
 
