@@ -2,7 +2,7 @@
 
 bool BayesianMixtureModel::getMoleculeMeanIPD(double *ipd, double *idx, int len_ipd, int len_idx)
 {
-	if (len_ipd != len_idx){ printf("length of R_IPD and R_idx should be the same."); return false;}
+	if (len_ipd != len_idx){ printf("length of R_IPD and R_idx should be the same.\n"); return false;}
         int len = len_ipd;
         pair<map<int,double>::iterator,bool> ret;
         map<int, double> ipd_sum_map;
@@ -39,7 +39,7 @@ bool BayesianMixtureModel::getMoleculeMeanIPD(double *ipd, double *idx, int len_
 	}
 	
 	if ( !(ipd_avg.size()==ipd_n.size()&&ipd_n.size()==ipd_var.size()) ){
-		printf("run error: size of ipd_avg, ipd_n and ipd_var should be the same."); 
+		printf("run error: size of ipd_avg, ipd_n and ipd_var should be the same.\n"); 
 		return false;
 	}
 	
@@ -75,7 +75,7 @@ bool BayesianMixtureModel_NC::run(int max_iter)
 		for (int i=0;i<T;i++){
 			E_var_norm_0 = 1/kappa_0_t[t-1] + (pow(theta_0_t[t-1] - ipd_avg[i], 2) + ipd_var[i])/tau2_0_t[t-1];
 			E_var_norm_1 = 1/kappa_1_t[t-1] + (pow(theta_1_t[t-1] - ipd_avg[i], 2) + ipd_var[i])/tau2_1_t[t-1];
-			//printf("E_var_norm_0 : %lf\n", E_var_norm_0);
+			//printf("E_var_norm_0 : %lf, E_var_norm_1 : %lf\n", E_var_norm_0, E_var_norm_1);
 			
 			//rho_0 = exp(E_log_1_p - E_var_norm_0 - E_log_sigma2_0);
 			//rho_1 = exp(E_log_p - E_var_norm_1 - E_log_sigma2_1);
@@ -170,7 +170,14 @@ bool BayesianMixtureModel_NC::run(int max_iter)
                 kappa_1_t.push_back(cur_kappa_1_t);
                 upsilon_1_t.push_back(cur_upsilon_1_t);
                 tau2_1_t.push_back(cur_tau2_1_t);
-
+		
+		// check convergence
+		double eps = 0.001;
+		bool is_converge = ( fabs(cur_theta_0_t - theta_0_t[t-1]) < eps && fabs(cur_kappa_0_t - kappa_0_t[t-1])/cur_kappa_0_t < eps && 
+					fabs(cur_upsilon_0_t - upsilon_0_t[t-1])/cur_upsilon_0_t < eps && fabs(cur_tau2_0_t - tau2_0_t[t-1])/cur_tau2_0_t < eps && 
+					fabs(cur_theta_1_t - theta_1_t[t-1]) < eps && fabs(cur_kappa_1_t - kappa_1_t[t-1])/cur_kappa_1_t < eps &&
+                                        fabs(cur_upsilon_1_t - upsilon_1_t[t-1])/cur_upsilon_1_t < eps && fabs(cur_tau2_1_t - tau2_1_t[t-1])/cur_tau2_1_t < eps);
+		if (is_converge) break;
 	}
 
 	// lock 
