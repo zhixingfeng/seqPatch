@@ -1,3 +1,6 @@
+#ifndef BAYESMODEL
+#define BAYESMODEL
+
 #include <stdio.h>
 #include <math.h>
 #include "SpecialFuns.h"
@@ -143,4 +146,4 @@ class BayesianMixtureModel_NC: public BayesianMixtureModel
 	
 };
 
-
+#endif

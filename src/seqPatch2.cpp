@@ -2,9 +2,7 @@
 #include <R.h>
 #include <Rinternals.h>
 #include <stdio.h>
-#include "SpecialFuns.h"
-#include "BayesianMixtureModel.h"
-
+#include "seqPatch2_headers.h"
 
 using namespace std;
 using namespace Rcpp;
@@ -45,11 +43,23 @@ RcppExport SEXP R_API_BayesianMixtureModel (SEXP R_IPD, SEXP R_idx, SEXP R_theta
       	return R_NilValue;
 }
 
-RcppExport SEXP DetectModProp_NC(SEXP R_IPD, SEXP R_idx)
+RcppExport SEXP R_API_DetectModProp_NC(SEXP R_IPD, SEXP R_idx)
 {
 
         return R_NilValue;
 }
 
+
+RcppExport SEXP R_API_hieModel_core(SEXP R_IPD_mean, SEXP R_IPD_var, SEXP R_IPD_n, SEXP R_max_iter)
+{
+	vector<double> IPD_mean(REAL(R_IPD_mean), REAL(R_IPD_mean) + Rf_length(R_IPD_mean) );
+        vector<double> IPD_var(REAL(R_IPD_var), REAL(R_IPD_var) + Rf_length(R_IPD_var) );
+        vector<double> IPD_n(REAL(R_IPD_n), REAL(R_IPD_n) + Rf_length(R_IPD_n) );
+	int max_iter = INTEGER(R_max_iter)[0];
+	
+	return Rcpp::wrap(hieModelEB(IPD_mean, IPD_var, IPD_n, max_iter) );	
+}
+
+ 
 
 

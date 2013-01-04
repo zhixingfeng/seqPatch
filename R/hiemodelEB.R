@@ -55,4 +55,11 @@ hieModelEB <- function(genomeF.native, genomeF.ctrl=NULL, genomeSeq, context.eff
 }
 
 
+hieModel_core <- function(IPD_mean, IPD_var, IPD_n, max.iter=10)
+{
+	# call hieModel_core defined in seqPatch2.cpp
+	.Call('R_API_hieModel_core', IPD_mean, IPD_var, IPD_n, as.integer(max.iter) )
+}
+
+
 

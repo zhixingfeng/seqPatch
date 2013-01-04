@@ -205,3 +205,18 @@ filterContextEffectSet <- function(context.effect.set, min.len = 10)
 }
 
 
+# get hyperprameters of each context
+getContextHyperparameters <- function(context.effect, max.iter=10)
+{
+	lapply(context.effect, function(x, max.iter) {rl <- hieModel_core(x$mean, x$var, x$len, max.iter); 
+				hyperPara <- as.list(rl$hyperPara); names(hyperPara)=c('theta','kappa','upsilon','tau2');
+				hyperPara$num.sites <- length(x$mean); hyperPara$median.cvg <- median(x$len);
+				hyperPara
+				}, max.iter=max.iter)		
+}
+
+
+
+
+
+

@@ -1753,6 +1753,16 @@ RcppExport SEXP bootstrap_bg_motif(SEXP Rmotif, SEXP RgenomeSeq, SEXP Ridx_sel, 
 	//return Rcpp::wrap(motif_freq);
 	//return Rcpp::List::create(Rcpp::Named("motif_freq")=Rcpp::wrap(motif_freq), Rcpp::Named("context_B")=Rcpp::wrap(context_B) );
 }
+
+
+
+
+
+
+
+
+
+
 /*RcppExport SEXP hieModelEB_core(SEXP data, SEXP Rmax_iter)
 {
 	vector<vector<double> > ipd;
