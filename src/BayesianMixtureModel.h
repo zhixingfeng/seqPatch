@@ -96,6 +96,8 @@ class BayesianMixtureModel
 
 		vector<double> get_gamma_0(){return gamma_0;}
 		vector<double> get_gamma_1(){return gamma_1;}
+		
+		double get_n_steps(){return  theta_0_t.size();}
 	
 		// get mean IPD of each molecule
 		bool getMoleculeMeanIPD(double *ipd, double *idx, int len_ipd, int len_idx);
