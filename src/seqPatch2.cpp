@@ -64,7 +64,6 @@ RcppExport SEXP R_API_DetectModProp_NC(SEXP R_IPD, SEXP R_idx, SEXP R_genome_sta
 		return R_NilValue;
 	}	
 
-
 	/*---------------- load data and parameters -----------------------*/
 	
 	// load context_hyperPara
@@ -96,6 +95,11 @@ RcppExport SEXP R_API_DetectModProp_NC(SEXP R_IPD, SEXP R_idx, SEXP R_genome_sta
         vector<double> upsilon_0_t(Rf_length(R_IPD), sqrt(-1)); vector<double> upsilon_1_t(Rf_length(R_IPD), sqrt(-1));
         vector<double> tau2_0_t(Rf_length(R_IPD), sqrt(-1)); vector<double> tau2_1_t(Rf_length(R_IPD), sqrt(-1));
 
+	vector<double> N_0_t(Rf_length(R_IPD), sqrt(-1)); vector<double> N_1_t(Rf_length(R_IPD), sqrt(-1));
+	vector<double> N_gamma_0_t(Rf_length(R_IPD), sqrt(-1)); vector<double> N_gamma_1_t(Rf_length(R_IPD), sqrt(-1));
+
+	vector<double> prop_mod(Rf_length(R_IPD), sqrt(-1));
+	
 	// number of iteration, coverge 
 	vector<double> n_steps(Rf_length(R_IPD), sqrt(-1));
 	vector<double> cvg(Rf_length(R_IPD), sqrt(-1));	
@@ -154,13 +158,83 @@ RcppExport SEXP R_API_DetectModProp_NC(SEXP R_IPD, SEXP R_idx, SEXP R_genome_sta
 		BayesianMixtureModelObj.run(max_iter);
 		
 		// get results
-							
-				
+		theta_0_t[i] = BayesianMixtureModelObj.get_theta_0_t();
+		kappa_0_t[i] = BayesianMixtureModelObj.get_kappa_0_t();							
+		upsilon_0_t[i] = BayesianMixtureModelObj.get_upsilon_0_t();
+		tau2_0_t[i] = BayesianMixtureModelObj.get_tau2_0_t();
+
+		theta_1_t[i] = BayesianMixtureModelObj.get_theta_1_t();
+                kappa_1_t[i] = BayesianMixtureModelObj.get_kappa_1_t();
+                upsilon_1_t[i] = BayesianMixtureModelObj.get_upsilon_1_t();
+                tau2_1_t[i] = BayesianMixtureModelObj.get_tau2_1_t();
+
+		N_0_t[i] = BayesianMixtureModelObj.get_N_0_t();	
+		N_1_t[i] = BayesianMixtureModelObj.get_N_1_t();
+		
+		N_gamma_0_t[i] = BayesianMixtureModelObj.get_N_gamma_0_t();
+                N_gamma_1_t[i] = BayesianMixtureModelObj.get_N_gamma_1_t();
+		
+		prop_mod[i] = N_1_t[i] / (N_0_t[i] + N_1_t[i]);
+	
+		n_steps[i] = BayesianMixtureModelObj.get_n_steps();
+	
+		cvg[i] = cur_IPD.size();
+
 	}
 	Rprintf("detected %d positions\n", genome_size);
 
-	return Rcpp::wrap(context_hyperPara);	
-        return R_NilValue;
+	/*--------------------- output --------------------------*/
+	map<string,vector<double> > rl;
+	rl["theta_0"] = theta_0;
+	rl["kappa_0"] = kappa_0;
+	rl["upsilon_0"] = upsilon_0;
+	rl["tau2_0"] = tau2_0;
+
+	rl["theta_0_t"] = theta_0_t;
+        rl["kappa_0_t"] = kappa_0_t;
+        rl["upsilon_0_t"] = upsilon_0_t;
+        rl["tau2_0_t"] = tau2_0_t;
+
+	rl["theta_1_t"] = theta_1_t;
+        rl["kappa_1_t"] = kappa_1_t;
+        rl["upsilon_1_t"] = upsilon_1_t;
+        rl["tau2_1_t"] = tau2_1_t;
+
+	rl["N_0_t"] = N_0_t;
+        rl["N_1_t"] = N_1_t;
+        rl["N_gamma_0_t"] = N_gamma_0_t;
+        rl["N_gamma_1_t"] = N_gamma_1_t;
+        
+	rl["prop_mod"] = prop_mod;
+       	rl["n_steps"] = n_steps;
+        rl["cvg"] = cvg;
+        rl["is_findContext"] = is_findContext;
+
+	return Rcpp::wrap(rl);
+
+	/*return Rcpp::List::create(Rcpp::Named("theta_0")=Rcpp::wrap(theta_0),
+				Rcpp::Named("kappa_0")=Rcpp::wrap(kappa_0),
+				Rcpp::Named("upsilon_0")=Rcpp::wrap(upsilon_0),	
+				Rcpp::Named("tau2_0")=Rcpp::wrap(tau2_0),
+				Rcpp::Named("theta_0_t")=Rcpp::wrap(theta_0_t),
+				Rcpp::Named("kappa_0_t")=Rcpp::wrap(kappa_0_t),
+				Rcpp::Named("upsilon_0_t")=Rcpp::wrap(upsilon_0_t),
+				Rcpp::Named("tau2_0_t")=Rcpp::wrap(tau2_0_t),
+				Rcpp::Named("theta_1_t")=Rcpp::wrap(theta_1_t),
+                                Rcpp::Named("kappa_1_t")=Rcpp::wrap(kappa_1_t),
+                                Rcpp::Named("upsilon_1_t")=Rcpp::wrap(upsilon_1_t),
+                                Rcpp::Named("tau2_1_t")=Rcpp::wrap(tau2_1_t),
+				Rcpp::Named("N_0_t")=Rcpp::wrap(N_0_t),
+				Rcpp::Named("N_1_t")=Rcpp::wrap(N_1_t),
+				Rcpp::Named("N_gamma_0_t")=Rcpp::wrap(N_gamma_0_t),
+				Rcpp::Named("N_gamma_1_t")=Rcpp::wrap(N_gamma_1_t),
+				Rcpp::Named("prop_mod")=Rcpp::wrap(prop_mod),
+				Rcpp::Named("n_steps")=Rcpp::wrap(n_steps),
+				Rcpp::Named("cvg")=Rcpp::wrap(cvg),
+				Rcpp::Named("is_findContext")= Rcpp::wrap(is_findContext));	
+	*/
+	//return Rcpp::wrap(context_hyperPara);	
+        //return R_NilValue;
 }
 
 
