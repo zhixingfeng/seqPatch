@@ -1,4 +1,4 @@
-detectModProp.NC <- function(genomeF.native, genomeSeq, context.hyperPara, left.len = 6, right.len = 1, max.iter=50)
+detectModProp.NC <- function(genomeF.native, genomeSeq, context.hyperPara, left.len = 6, right.len = 1, max.iter=5000)
 {
 	# check consistence of context.hyperPara and left.len, right.len
 	if (nchar(names(context.hyperPara)[1]) != left.len + right.len + 1)
