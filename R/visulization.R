@@ -30,7 +30,7 @@ plotAvgIPD.density <- function(IPD, mol.id, IPD.ctrl=NULL, mol.id.ctrl=NULL, loc
 		png(file=out.file, type='cairo')
                 plot(dens, col='red', xlab='average IPD', xlim=range(x,dens$x, dens.ctrl$x),
 			ylim = range(y, dens$y, dens.ctrl$y), main=tl)
-                density(dens.ctrl, col='green')
+                lines(dens.ctrl, col='green')
 		lines(x,y, col = 'blue', lty=2)
 		dev.off()	
 
