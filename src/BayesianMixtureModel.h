@@ -24,7 +24,9 @@ class BayesianMixtureModel
 		{
 			// load hyperparameters
 			theta_0 = _theta_0; kappa_0 = _kappa_0; upsilon_0 = _upsilon_0; tau2_0 = _tau2_0;
-			theta_1 = theta_0 + 2;
+			//theta_1 = theta_0 + 2;
+			theta_1 = theta_0 + 0.1;
+			upsilon_1 = _upsilon_0; tau2_1 = _tau2_0;
 			
 			// clear distribution parameters			
 			theta_0_t.clear(); theta_1_t.clear();
@@ -101,9 +103,6 @@ class BayesianMixtureModel
 	
 		// get mean IPD of each molecule
 		bool getMoleculeMeanIPD(double *ipd, double *idx, int len_ipd, int len_idx);
-
-		// fit Bayesian Gaussian Mixture Model
-		//bool run(int max_iter=100);
 	
 	protected:
 		// hyperprameters

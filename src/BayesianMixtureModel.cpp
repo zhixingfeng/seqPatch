@@ -3,7 +3,8 @@
 bool BayesianMixtureModel::getMoleculeMeanIPD(double *ipd, double *idx, int len_ipd, int len_idx)
 {
 	if (len_ipd != len_idx){ printf("length of R_IPD and R_idx should be the same.\n"); return false;}
-        int len = len_ipd;
+	// get average IPD of each molecule 
+	int len = len_ipd;
         pair<map<int,double>::iterator,bool> ret;
         map<int, double> ipd_sum_map;
         map<int, double> ipd_n_map;
@@ -72,30 +73,33 @@ bool BayesianMixtureModel_NC::run(int max_iter)
 		double N_S2_0_tilde = 0; double N_S2_1_tilde = 0;
 		double N_S2_0_bar = 0; double N_S2_1_bar = 0;	
 	
+	/*	printf("ipd_avg: ");
+		for (int i=0;i<(int)ipd_avg.size();i++) printf("%lf ", ipd_avg[i]);
+		printf("\n");
+		
+		printf("ipd_var: ");
+                for (int i=0;i<(int)ipd_avg.size();i++) printf("%lf ", ipd_var[i]);
+                printf("\n");
+	*/	
+
 		for (int i=0;i<T;i++){
 			E_var_norm_0 = 1/kappa_0_t[t-1] + (pow(theta_0_t[t-1] - ipd_avg[i], 2) + ipd_var[i])/tau2_0_t[t-1];
 			E_var_norm_1 = 1/kappa_1_t[t-1] + (pow(theta_1_t[t-1] - ipd_avg[i], 2) + ipd_var[i])/tau2_1_t[t-1];
 			//printf("E_var_norm_0 : %lf, E_var_norm_1 : %lf\n", E_var_norm_0, E_var_norm_1);
 			
-			//rho_0 = exp(E_log_1_p - E_var_norm_0 - E_log_sigma2_0);
-			//rho_1 = exp(E_log_p - E_var_norm_1 - E_log_sigma2_1);
-			//printf("rho_0:%lf, rho_1:%lf \n", rho_0, rho_1);			
 			log_rho_0 = E_log_1_p - E_var_norm_0 - E_log_sigma2_0;
 			log_rho_1 = E_log_p - E_var_norm_1 - E_log_sigma2_1;
 
 			// estimate gamma_0 and gamma_1
-			//gamma_0[i] = rho_0 / (rho_0 + rho_1);
-			//gamma_1[i] = 1 - gamma_0[i];
 			if (log_rho_1 - log_rho_0 >= 40)
 				gamma_0[i] = 0;
 			else 
 				gamma_0[i] = 1 / (1 + exp(log_rho_1 - log_rho_0) );
-			if (log_rho_0 - log_rho_1 >= 40)	
-				gamma_1[i] = 0;
-			else 
-				gamma_1[i] = 1 / (1 + exp(log_rho_0 - log_rho_1) );
 			
-
+			gamma_1[i] = 1 - gamma_0[i];
+			//printf("[%lf; (%lf, %lf); (%lf, %lf); (%lf, %lf) ]", gamma_0[i], E_var_norm_0, E_var_norm_1, E_log_1_p, E_log_p ,
+			//	E_log_sigma2_0, E_log_sigma2_1);
+			printf("(%lf, %lf, %lf) ", ipd_avg[i], ipd_var[i], gamma_0[i]);	
 			// get N_0 and N_1
 			cur_N_0 += gamma_0[i]; 
 			cur_N_1 += gamma_1[i];
@@ -122,6 +126,7 @@ bool BayesianMixtureModel_NC::run(int max_iter)
 			//printf("ipd_var : %lf, cur_N_gamma_0_i : %lf, cur_N_gamma_1_i : %lf \n", ipd_var[i], cur_N_gamma_0_i, cur_N_gamma_1_i);
 
 		}
+		printf("\n");
 		if (cur_N_gamma_0 <= ERR)
 			N_S2_0_tilde = ERR;
 		else 
