@@ -99,7 +99,7 @@ bool BayesianMixtureModel_NC::run(int max_iter)
 			gamma_1[i] = 1 - gamma_0[i];
 			//printf("[%lf; (%lf, %lf); (%lf, %lf); (%lf, %lf) ]", gamma_0[i], E_var_norm_0, E_var_norm_1, E_log_1_p, E_log_p ,
 			//	E_log_sigma2_0, E_log_sigma2_1);
-			printf("(%lf, %lf, %lf) ", ipd_avg[i], ipd_var[i], gamma_0[i]);	
+			//printf("(%lf, %lf, %lf) ", ipd_avg[i], ipd_var[i], gamma_0[i]);	
 			// get N_0 and N_1
 			cur_N_0 += gamma_0[i]; 
 			cur_N_1 += gamma_1[i];
@@ -126,7 +126,7 @@ bool BayesianMixtureModel_NC::run(int max_iter)
 			//printf("ipd_var : %lf, cur_N_gamma_0_i : %lf, cur_N_gamma_1_i : %lf \n", ipd_var[i], cur_N_gamma_0_i, cur_N_gamma_1_i);
 
 		}
-		printf("\n");
+		//printf("\n");
 		if (cur_N_gamma_0 <= ERR)
 			N_S2_0_tilde = ERR;
 		else 
