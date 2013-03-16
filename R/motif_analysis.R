@@ -1,7 +1,7 @@
 # get context of significant sites (if cutoff is not NULL, top is not used)
 getDetectedContext <- function(detection, genomeSeq, stat='LR_log', top=1000, cutoff=NULL, left.len = 15, right.len = 15)
 {
-	if (sort(names(detection$pos)) != sort(names(genomeSeq$pos)) )
+	if ( any(sort(names(detection$pos)) != sort(names(genomeSeq$pos))) )
 		stop('unmatched detection and genomeSeq.')
 	
 	# merage signals
