@@ -1,3 +1,46 @@
+write.genomeFtoCSV <- function(genomeF, dir, prefix='csv_data')
+{
+	if (any(names(genomeF$features$ipd_pos)!=names(genomeF$genome.start.pos)) | 
+		any(names(genomeF$features$ipd_neg)!=names(genomeF$genome.start.neg)) | 
+		any(names(genomeF$features$moleculeID_pos)!=names(genomeF$genome.start.pos)) | 
+		any(names(genomeF$features$moleculeID_neg)!=names(genomeF$genome.start.neg)))
+			stop('names of genomeF are not correct.')
+	# positive strand
+	cat('convet positive strand\n')
+	for (i in 1:length(genomeF$features$ipd_pos)){
+		cur.ref <- names(genomeF$features$ipd_pos[i])
+		ipd <- genomeF$features$ipd_pos[[i]]
+		mol.ID <- genomeF$features$moleculeID_pos[[i]]
+		if (length(ipd)!=length(mol.ID)) stop('length of IPD and moleculeID are not the same.')
+		ref.pos <- genomeF$genome.start.pos[[i]] - 1 + 1:length(ipd)
+		if (substr(dir, nchar(dir), nchar(dir))=='/'){
+			file.name <- paste(dir, prefix,'_',cur.ref,'_pos.csv',sep='')
+		}else{
+			file.name <- paste(dir,'/',prefix,'_',cur.ref,'_pos.csv',sep='')
+		}
+		cat('convert ', cur.ref, '\n',sep='')
+		.Call('R_API_writeGenomeFtoCSV', ipd, mol.ID, ref.pos, file.name)	
+	}
+	
+	# negative strand
+	cat('convet negative strand\n')
+        for (i in 1:length(genomeF$features$ipd_neg)){
+                cur.ref <- names(genomeF$features$ipd_neg[i])
+                ipd <- genomeF$features$ipd_neg[[i]]
+                mol.ID <- genomeF$features$moleculeID_neg[[i]]
+                if (length(ipd)!=length(mol.ID)) stop('length of IPD and moleculeID are not the same.')
+                ref.pos <- genomeF$genome.start.neg[[i]] - 1 + 1:length(ipd)
+                if (substr(dir, nchar(dir), nchar(dir))=='/'){
+                        file.name <- paste(dir, prefix,'_',cur.ref,'_neg.csv',sep='')
+                }else{
+                        file.name <- paste(dir,'/',prefix,'_',cur.ref,'_neg.csv',sep='')
+                }
+		cat('convert ', cur.ref, '\n',sep='')
+                .Call('R_API_writeGenomeFtoCSV', ipd, mol.ID, ref.pos, file.name)
+        }
+
+}
+
 plotLR_log_density <- function(LR, LR.flank, file.name, xlim=NULL)
 {
         den.motif <- density(LR$LR_log, na.rm=TRUE)

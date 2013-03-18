@@ -250,4 +250,29 @@ RcppExport SEXP R_API_hieModel_core(SEXP R_IPD_mean, SEXP R_IPD_var, SEXP R_IPD_
 
  
 
+RcppExport SEXP R_API_writeGenomeFtoCSV(SEXP R_IPD, SEXP R_mol_ID, SEXP R_ref_pos, SEXP R_file_name)
+{
+	string file_name = CHAR(STRING_ELT(R_file_name,0));
+	double * ref_pos = REAL(R_ref_pos);
+	int genome_size = Rf_length(R_ref_pos);
+	
+	FILE *outfile = fopen(file_name.c_str(), "w");
+	for (int i=0;i<genome_size;i++){
+		double * IPD = REAL(VECTOR_ELT(R_IPD,i));
+		double * mol_ID = REAL(VECTOR_ELT(R_mol_ID,i));
+		int cvg = Rf_length(VECTOR_ELT(R_IPD,i));
+		if (cvg!=Rf_length(VECTOR_ELT(R_mol_ID,i))){
+			Rprintf("inconsistent length of IPD and moleculeID in %d.\n", ref_pos[i]);
+			return R_NilValue;
+		}
+		for (int j=0;j<cvg;j++) fprintf(outfile, "%.0lf\t%.0lf\t%lf\n", mol_ID[j], ref_pos[i], IPD[j]);	
+		if ((i+1)%10000==0) Rprintf("converted %d positions.\r", i+1);
+	}
+	Rprintf("converted %d positions.\n", genome_size);
+	fclose(outfile);
+	return R_NilValue;
+
+}
+
+
 
