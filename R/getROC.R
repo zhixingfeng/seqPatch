@@ -364,7 +364,7 @@ getIdxByMotif <- function(genomeSeq, motif, shift=0)
 	names(idx.methy$pos) <- names(genome.seq.pos)
 	
 	for (i in 1:length(genome.seq.neg)){
-                idx.methy$neg[[i]] <- gregexpr(reverseSeq(motif), genome.seq.neg[[i]])[[1]] + nchar(motif) - 1 - shift
+                idx.methy$neg[[i]] <- gregexpr(reverseSeq(motif), genome.seq.neg[[i]])[[1]] + getLengthOfRegularExpr(motif) - 1 - shift
         }
 	names(idx.methy$neg) <- names(genome.seq.neg)	
 	idx.methy

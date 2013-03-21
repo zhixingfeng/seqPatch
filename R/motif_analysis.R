@@ -1,7 +1,27 @@
 # report IPD distribution and number of sites of motifs
-report.motif.stat <- function(detection, idx.motif, motif, stat='LR_log', dir)	
+report.motif.stat <- function(detection, genomeSeq, motif, shift, ref.name, prefix, stat='LR_log')	
 {
-		
+	if (length(motif)!=length(shift)) stop('incompatible motif and shift')
+
+	n <- 1
+	stat.motif.list <- list()
+	for (i in 1:length(motif)){
+		idx.motif <-  getIdxByMotif(genomeSeq, motif[i], shift[i])
+		stat.motif <- getStatByIdx(detection, idx.motif, stat) 
+		stat.motif.list[[n]] <- stat.motif$pos[[ref.name]]
+		stat.motif.list[[n+1]] <- stat.motif$neg[[ref.name]] 
+		names(stat.motif.list)[n] <- paste(motif[i],'_pos',sep='')
+		names(stat.motif.list)[n+1] <- paste(motif[i],'_neg',sep='')
+		n <- n + 2
+	}
+	len <- length(stat.motif.list)
+	stat.motif.list [[len+1]] <- detection$pos[[ref.name]][[stat]]
+	names(stat.motif.list)[len + 1] <- 'All'
+
+	file.path <- paste(prefix, '_', ref.name, '.pdf', sep='')
+	pdf(file=file.path)
+	boxplot(stat.motif.list, outline=FALSE, las=2, ylab=stat)
+	dev.off()
 }
 
 # get context of significant sites (if cutoff is not NULL, top is not used)

@@ -154,6 +154,20 @@ mergeLR_log <- function(detection, idx.list)
 	
 }
 
+getLengthOfRegularExpr <- function(word)
+{
+	left <- gregexpr('[[]',word)[[1]]
+	right <- gregexpr('[]]', word)[[1]]
+
+	if (sum(left!=-1)==0 & sum(right!=-1)==0) return (nchar(word))	
+	if (sum(left!=-1)!=sum(right!=-1)) stop('number of [ and ] are not the same')
+	if (any(left >= right)) stop('[ should be in left of ]')	
+	
+	len <- sum(right - left - 2)
+
+	nchar(word) - length(left) - length(right) - len
+}
+
 getStatByIdx <- function(detection, idx.sel, stat='LR_log')
 {
 	# forward strand
