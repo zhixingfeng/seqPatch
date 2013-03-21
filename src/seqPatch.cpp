@@ -1821,9 +1821,18 @@ RcppExport SEXP reverseSeq(SEXP Rseq)
 {
 	const string seq = CHAR(STRING_ELT(Rseq,0));
 	string new_seq(seq);
-	
+	int lock = 0;	
 	for (unsigned int i=0;i<seq.size();i++){
 		new_seq[i] = seq[seq.size()-1-i];
+		if (new_seq[i]=='[' || new_seq[i]==']'){
+			if (lock == 0){
+				new_seq[i] = '[';
+				lock = 1;
+			}else{
+				new_seq[i] = ']';
+				lock = 0;
+			}
+		}
 	}
 	SEXP rl = Rcpp::wrap(new_seq);
 	//SEXP rl=R_NilValue;

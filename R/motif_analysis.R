@@ -1,3 +1,9 @@
+# report IPD distribution and number of sites of motifs
+report.motif.stat <- function(detection, idx.motif, motif, stat='LR_log', dir)	
+{
+		
+}
+
 # get context of significant sites (if cutoff is not NULL, top is not used)
 getDetectedContext <- function(detection, genomeSeq, stat='LR_log', top=1000, cutoff=NULL, left.len = 15, right.len = 15)
 {
@@ -43,6 +49,7 @@ getDetectedContext <- function(detection, genomeSeq, stat='LR_log', top=1000, cu
 	detected.context	
 }
 
+# write context into a fasta file
 write.context <- function(context, file)
 {
 	cat('>seq', 1, '\n', context[1], '\n', sep='', file=file, append=FALSE )
