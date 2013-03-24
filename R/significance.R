@@ -1,4 +1,4 @@
-getPvalue.from.t.stat <- function(detection)
+getPvalue.from.t.stat <- function(detection, is.return.full = FALSE)
 {
 	p.value <- list()
 	p.value$genome.start.pos <- detection$genome.start.pos
@@ -22,6 +22,8 @@ getPvalue.from.t.stat <- function(detection)
 
 		v <- (s2.native/N.native + s2.ctrl/N.ctrl)^2 / (s2.native^2/(N.native^2*(N.native-1)) + s2.ctrl^2/(N.ctrl^2*(N.ctrl-1)))
 		p.value$pos[[cur.ref]] <- 2*pt(-abs(t.stat),df=v)	
+		if (is.return.full==TRUE) 
+			detection$pos[[i]]$p.value <- p.value$pos[[cur.ref]]
 	}
 
 	# backward strand
@@ -40,11 +42,18 @@ getPvalue.from.t.stat <- function(detection)
 
                 v <- (s2.native/N.native + s2.ctrl/N.ctrl)^2 / (s2.native^2/(N.native^2*(N.native-1)) + s2.ctrl^2/(N.ctrl^2*(N.ctrl-1)))
                 p.value$neg[[cur.ref]] <- 2*pt(-abs(t.stat),df=v)
+		if (is.return.full==TRUE)
+                        detection$neg[[i]]$p.value <- p.value$neg[[cur.ref]]
+
         }
-	p.value
+	if (is.return.full==TRUE)
+		return(detection)
+	else
+		return(p.value)
+
 }
 
-getZvalue.from.t.stat <- function(detection)
+getZvalue.from.t.stat <- function(detection, is.return.full = FALSE)
 {
         z.stat <- list()
         z.stat$genome.start.pos <- detection$genome.start.pos
@@ -68,7 +77,9 @@ getZvalue.from.t.stat <- function(detection)
 
                 v <- (s2.native/N.native + s2.ctrl/N.ctrl)^2 / (s2.native^2/(N.native^2*(N.native-1)) + s2.ctrl^2/(N.ctrl^2*(N.ctrl-1)))
                 z.stat$pos[[cur.ref]] <- qnorm(pt(t.stat,df=v, log.p=TRUE)  ,log.p=TRUE)
-        }
+        	if (is.return.full == TRUE)
+			detection$pos[[i]]$z.stat <- z.stat$pos[[cur.ref]]
+	}
 
         # backward strand
         for (i in 1:length(detection$neg)){
@@ -86,7 +97,13 @@ getZvalue.from.t.stat <- function(detection)
 
                 v <- (s2.native/N.native + s2.ctrl/N.ctrl)^2 / (s2.native^2/(N.native^2*(N.native-1)) + s2.ctrl^2/(N.ctrl^2*(N.ctrl-1)))
                 z.stat$neg[[cur.ref]] <- qnorm(pt(t.stat,df=v, log.p=TRUE)  ,log.p=TRUE)
+		if (is.return.full == TRUE)
+                        detection$neg[[i]]$z.stat <- z.stat$neg[[cur.ref]]
+
         }
-        z.stat
+	if (is.return.full == TRUE)
+		return(detection)
+	else
+        	return(z.stat)
 }
 
