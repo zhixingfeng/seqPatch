@@ -1,5 +1,5 @@
 # report IPD distribution and number of sites of motifs
-report.motif.stat <- function(detection, genomeSeq, motif, shift, ref.name, prefix, stat='LR_log')	
+report.motif.stat <- function(detection, genomeSeq, motif, shift, ref.name, prefix, stat='LR_log', mar=c(10,4,4,4))	
 {
 	if (length(motif)!=length(shift)) stop('incompatible motif and shift')
 
@@ -20,6 +20,7 @@ report.motif.stat <- function(detection, genomeSeq, motif, shift, ref.name, pref
 
 	file.path <- paste(prefix, '_', ref.name, '.pdf', sep='')
 	pdf(file=file.path)
+	par(mar=mar)
 	boxplot(stat.motif.list, outline=FALSE, las=2, ylab=stat)
 	dev.off()
 }
