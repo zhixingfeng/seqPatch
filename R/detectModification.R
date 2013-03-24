@@ -115,7 +115,9 @@ detectModification <- function(genomeF.native, genomeF.ctrl, genomeSeq=NULL, con
 	
 	
 	detection <- list()
-	if (method == 'CC'){	
+	if (method == 'CC'){
+		left.len <- 0
+		right.len <- 0	
 		cat('detect DNA modification by case-control method\n')
 		# generate a fake genomeSeq and context.effect to avoid change the C code
 		fake.genomeSeq <- list()
