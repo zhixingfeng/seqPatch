@@ -191,7 +191,6 @@ getStatByIdx <- function(detection, idx.sel, stat='LR_log')
 	rl 
 }
 
-
 getRegionByCutoff <- function(detection, cutoff, idx.sel=NULL, stat='LR_log', method='less')
 {
 	idx <- list()
