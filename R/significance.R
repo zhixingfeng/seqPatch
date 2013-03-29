@@ -30,10 +30,11 @@ get.detected.sites <- function(detection, left.cutoff, right.cutoff, stat='z.sta
 		idx.motif.merge$neg <- list()
 		for (i in 1:length(motif)){
 			idx.motif <- getIdxByMotif(genomeSeq, motif[i], shift[i])
+			#cat(length(idx.motif$pos[[1]]),' : ', length(idx.motif$neg[[1]]),'\n')
 			for (j in 1:length(idx.motif$pos)){
 				cur.ref <- names(idx.motif$pos[j])
-				idx.motif.merge$pos[[cur.ref]] <- union(idx.motif.merge$pos[[cur.ref]], idx.motif$pos[[cur.ref]])
-				idx.motif.merge$neg[[cur.ref]] <- union(idx.motif.merge$neg[[cur.ref]], idx.motif$neg[[cur.ref]])
+				idx.motif.merge$pos[[cur.ref]] <- c(idx.motif.merge$pos[[cur.ref]], idx.motif$pos[[cur.ref]])
+				idx.motif.merge$neg[[cur.ref]] <- c(idx.motif.merge$neg[[cur.ref]], idx.motif$neg[[cur.ref]])
 			}	
 		}
 		# get overlap of significant sites 
