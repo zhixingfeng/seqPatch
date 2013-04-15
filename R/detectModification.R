@@ -149,6 +149,8 @@ detectModification <- function(genomeF.native, genomeF.ctrl, genomeSeq=NULL, con
 		detection <- hieModelEB.NH(genomeF.native, genomeF.ctrl, genomeSeq, left.len, right.len,
 					FALSE, min.cvg, min.pos)
 	}
+	
+	if (method=='CC') detection <- getZvalue.from.t.stat(getZvalue.from.t.stat, TRUE)
 
 	detection
 }
