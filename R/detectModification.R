@@ -150,7 +150,7 @@ detectModification <- function(genomeF.native, genomeF.ctrl, genomeSeq=NULL, con
 					FALSE, min.cvg, min.pos)
 	}
 	
-	if (method=='CC') detection <- getZvalue.from.t.stat(getZvalue.from.t.stat, TRUE)
+	if (method=='CC') detection <- getZvalue.from.t.stat(detection, TRUE)
 
 	detection
 }
