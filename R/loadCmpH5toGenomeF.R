@@ -1,5 +1,7 @@
-loadCmpH5toGenomeF <- function(cmpH5.file, out.dir, n.chunk=10, normalization.method='bySubread', is.use.CCS=FALSE, is.return=FALSE)
+loadCmpH5toGenomeF <- function(cmpH5.file, out.dir, n.chunk=10, normalization.method='bySubread', is.use.CCS=FALSE, is.return=FALSE, mapQV.cutoff=255)
 {
+	mapQV.cutoff <- mapQV.cutoff - 1
+
 	cmpH5 <- PacBioCmpH5(cmpH5.file)
 	alnsIdx <- alnIndex(cmpH5)
 	
@@ -18,6 +20,11 @@ loadCmpH5toGenomeF <- function(cmpH5.file, out.dir, n.chunk=10, normalization.me
 		alnsF.cur <- getAlignmentsWithFeatures(cmpH5, idx=idx.list[[i]], fxs=list(IPD=getIPD))
 		alnsIdx.cur <- alnsIdx[idx.list[[i]], ]
 		
+		# remove low mapQV subreads
+		idx.sel <- which (alnsIdx.cur$mapQV>=mapQV.cutoff)
+		alnsF.cur <- alnsF.cur[idx.sel]	
+		alnsIdx.cur <- alnsIdx.cur[idx.sel,]
+
 		alnsF.cur <- transformIPD(alnsF.cur)
 		if (normalization.method=='bySubread')
 			alnsF.cur <- normalizeBySubread(alnsF.cur)
