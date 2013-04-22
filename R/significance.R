@@ -117,6 +117,18 @@ getStatByMotif <- function(detection, genomeSeq, stat, motif, shift)
 	names(stat.motif) <- motif
 	stat.motif
 }
+
+getIdxByMotif.wrap <- function(genomeSeq, motif, shift)
+{
+	if (length(motif)!=length(shift)) stop('unmatched motif and shift')
+	idx.motif <- list()
+        for (i in 1:length(motif)){
+                idx.motif[[i]] <- getIdxByMotif(genomeSeq, motif[i], shift[i])
+        }
+        names(idx.motif) <- motif
+	idx.motif
+}
+
 getPvalue.from.t.stat <- function(detection, is.return.full = FALSE)
 {
 	p.value <- list()
