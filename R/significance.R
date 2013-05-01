@@ -238,3 +238,14 @@ getZvalue.from.t.stat <- function(detection, is.return.full = FALSE)
         	return(z.stat)
 }
 
+simOverlap <- function(total.1, sampled.1, total.2, sampled.2, B=1000)
+{
+	x <- numeric(B)
+	for (i in 1:B){
+		idx.1 <- sample(1:total.1, size = sampled.1)	
+		idx.2 <- sample(1:total.2, size = sampled.2)
+		x[i] <- length(intersect(idx.1, idx.2))
+	}
+	x
+}
+
