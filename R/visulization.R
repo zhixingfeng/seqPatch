@@ -13,6 +13,7 @@ plotAvgIPD.density <- function(IPD, mol.id, IPD.ctrl=NULL, mol.id.ctrl=NULL, loc
 		IPD.list.ctrl <- split(IPD.ctrl, mol.id.ctrl)
         	IPD.avg.ctrl <- sapply(IPD.list.ctrl, mean)	
 	}
+	if (length(IPD.avg)<3 | length(IPD.avg.ctrl)<3) return (FALSE)
 	
 	if (is.null(loci)){
 		if (!is.null(IPD.ctrl) & !is.null(mol.id.ctrl)) {
@@ -58,7 +59,8 @@ plotAvgIPD.density <- function(IPD, mol.id, IPD.ctrl=NULL, mol.id.ctrl=NULL, loc
 			lines(x,y, col = 'blue', lty=2)	
 			dev.off()
 		}	
-	}
+	}	
+	return (TRUE)
 }
 
 

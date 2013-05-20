@@ -31,8 +31,7 @@ R CMD INSTALL downloaded_folder_name
 
 A real example
 ==============
-http://www.pacificbiosciences.com/devnet/files/datasets/secondary-analysis/seqpatch-plos-cb/example_release.tgz
-
+https://xfengz02.u.hpc.mssm.edu/example_release.tar.gz
 
 Upcoming features
 =================
