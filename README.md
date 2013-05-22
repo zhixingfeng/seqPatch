@@ -21,8 +21,7 @@ launch R console and type
 
 Install pbh5
 ============
-see http://www.smrtcommunity.com/Share/Code?id=a1q70000000GrfbAAC&strRecordTypeName=Code
-
+https://github.com/PacificBiosciences/R-pbh5
 
 Install seqPatch
 ================

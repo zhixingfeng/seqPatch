@@ -66,7 +66,7 @@ get.z.stat.from.locfdr <- function(locfdr.output, FDR.cutoff=0.1)
 }
 
 
-getFDRcutoff.genome.wide <- function(detection, file=NULL, nulltype=0)
+getFDRcutoff.genome.wide <- function(detection, file=NULL, nulltype=0, df=20)
 {
 	# merge z.stat of detection
 	z.stat <- numeric(0)
@@ -83,10 +83,10 @@ getFDRcutoff.genome.wide <- function(detection, file=NULL, nulltype=0)
 	# get FDR report 
 	if (!is.null(file)){
 		pdf(file=file)
-		tmp <- locfdr(z.stat, mlests=c(0,1), plot=1, nulltype=1)
+		tmp <- locfdr(z.stat, mlests=c(0,1), plot=1, nulltype=1, df=df)
 		dev.off()
 	}
-	rl <- locfdr(z.stat, mlests=c(0,1), plot=0, nulltype=nulltype)
+	rl <- locfdr(z.stat, mlests=c(0,1), plot=0, nulltype=nulltype, df=df)
 	rl
 }
 
