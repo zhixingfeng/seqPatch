@@ -24,7 +24,50 @@ report.motif.stat <- function(detection, genomeSeq, motif, shift, ref.name, pref
 	boxplot(stat.motif.list, outline=FALSE, las=2, ylab=stat)
 	dev.off()
 }
+getDetectedContextByIndex <- function(detected.sites, genomeSeq, left.len=15, right.len=15, is.merge=TRUE) 
+{
+	detected.context <- list()
+	detected.context$pos <- list()
+	detected.context$neg <- list()
+	# forward strand 
+	for (i in 1:length(detected.sites$pos)){
+		cur.ref <- names(detected.sites$pos[i])
+		cur.genomeseq <- genomeSeq$pos[[i]]
+		detected.context$pos[[cur.ref]] <- character(0)
+		cur.idx <- detected.sites$pos[[i]]
+		for (j in 1:length(cur.idx)){
+			detected.context$pos[[cur.ref]] <- c(detected.context$pos[[cur.ref]], 
+				substr(cur.genomeseq, cur.idx[j]-left.len, cur.idx[j]+right.len))
+		}
+	}
 
+	# backward strand
+        for (i in 1:length(detected.sites$neg)){
+                cur.ref <- names(detected.sites$neg[i])
+                cur.genomeseq <- genomeSeq$neg[[i]]
+                detected.context$neg[[cur.ref]] <- character(0)
+                cur.idx <- detected.sites$neg[[i]]
+                for (j in 1:length(cur.idx)){
+                        detected.context$neg[[cur.ref]] <- c(detected.context$neg[[cur.ref]],
+                                reverseSeq(substr(cur.genomeseq, cur.idx[j]-right.len, cur.idx[j]+left.len)))
+                }
+        }
+	if (is.merge==TRUE){
+		detected.context.pool <- character(0)
+		for (i in 1:length(detected.context$pos)){
+			for (j in 1:length(detected.context$pos[[i]]))
+				detected.context.pool <- c(detected.context.pool, detected.context$pos[[i]][j])
+		}		
+		for (i in 1:length(detected.context$neg)){
+                        for (j in 1:length(detected.context$neg[[i]]))
+                                detected.context.pool <- c(detected.context.pool, detected.context$neg[[i]][j])
+                }
+		return(detected.context.pool)
+	}else{
+		return(detected.context)
+	}
+	
+}
 # get context of significant sites (if cutoff is not NULL, top is not used)
 getDetectedContext <- function(detection, genomeSeq, stat='LR_log', top=1000, cutoff=NULL, left.len = 15, right.len = 15)
 {
