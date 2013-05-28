@@ -297,9 +297,9 @@ trim.context.effect <- function(context.effect.bypos, cvg.cutoff = 20, context.e
 }
 
 
-filter.outlier <- function(x)
+filter.outlier <- function(x, k=3.5)
 {
-	.Call('filter_outlier_wrap',as.numeric(x))
+	.Call('filter_outlier_wrap',as.numeric(x), as.numeric(k))
 }
 
 filter.outlier.byGenomeF <- function(ipd)
