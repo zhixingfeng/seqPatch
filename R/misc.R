@@ -297,9 +297,11 @@ trim.context.effect <- function(context.effect.bypos, cvg.cutoff = 20, context.e
 }
 
 
-filter.outlier <- function(x, k=3.5)
+filter.outlier <- function(x, k=3.5, tail='right')
 {
-	.Call('filter_outlier_wrap',as.numeric(x), as.numeric(k))
+	if (tail!='right' & tail!='left' & tail!='both') 
+		stop('tail should be \'right\', \'left\' or \'both\'')
+	.Call('filter_outlier_wrap',as.numeric(x), as.numeric(k), tail)
 }
 
 filter.outlier.byGenomeF <- function(ipd)

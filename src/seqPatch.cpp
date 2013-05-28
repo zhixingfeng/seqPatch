@@ -1791,14 +1791,17 @@ RcppExport SEXP hieModelEB_core_alt(SEXP data, SEXP Ripd_native, SEXP Rmax_iter)
 }*/
 
 
-RcppExport SEXP filter_outlier_wrap(SEXP data, SEXP Rk)
+RcppExport SEXP filter_outlier_wrap(SEXP data, SEXP Rk, SEXP Rtail)
 {
 	double * cur_ipd_ay = REAL(data);
 	int cur_cvg = Rf_length(data);
 	vector<double> cur_ipd(cur_ipd_ay, cur_ipd_ay + cur_cvg);
+
 	double k = REAL(Rk)[0];
+	
+	string tail = CHAR(STRING_ELT(Rtail,0));
 	if (cur_cvg<=3) return Rcpp::wrap(cur_ipd);
-        else return Rcpp::wrap(filter_outlier(cur_ipd, k));
+        else return Rcpp::wrap(filter_outlier(cur_ipd, k, tail));
 	
 }
 RcppExport SEXP filter_outlier_by_genomeF(SEXP data)

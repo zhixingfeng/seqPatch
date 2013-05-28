@@ -397,14 +397,19 @@ inline double stddev(const vector<double> &data) {
 
 
 //  The following code is written by Zhixing Feng
-vector<double> filter_outlier(vector<double> &data, double k = 2.5)
+vector<double> filter_outlier(vector<double> &data, double k = 2.5, string tail="right")
 {
 	sort(data.begin(), data.end());
 	int bd = int( data.size() * 0.25);
 	double low = data[bd]; double high = data[data.size() -1 -bd];
 	double len = high - low;
 	vector<double> data_ft;
-	for (int i=0;i<(int)data.size();i++) if (data[i]>=low-k*len && data[i]<=high+k*len) data_ft.push_back(data[i]);
+	if (tail=="right")
+		for (int i=0;i<(int)data.size();i++) if (data[i]<=high+k*len) data_ft.push_back(data[i]);
+	if (tail=="left")
+                for (int i=0;i<(int)data.size();i++) if (data[i]>=low-k*len) data_ft.push_back(data[i]);
+	if (tail=="both")
+		for (int i=0;i<(int)data.size();i++) if (data[i]>=low-k*len && data[i]<=high+k*len) data_ft.push_back(data[i]);
 	//Rprintf("%lf\n%lf\n",low,high);
 	return data_ft;
 }
