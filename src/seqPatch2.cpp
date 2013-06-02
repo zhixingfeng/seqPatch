@@ -25,7 +25,113 @@ bool loadContextHyperPara(SEXP R_context_hyperPara, SEXP R_context, map<string, 
 	return true;
 }
 
+double getTstat_var_equal(double * x, int n_x, double * y, int n_y)
+{
+	double t = sqrt(-1);
+	if (n_x + n_y <= 2) return t;
+	 
+	// s2 is summation of variance 
+	double m_x = 0;
+	double s2_x = 0;
+	double m_y = 0;
+	double s2_y = 0;
+
+	for (int i=0;i<n_x;i++){
+		m_x += x[i];
+		s2_x += x[i]*x[i];
+	} 		
+	m_x = m_x / n_x;
+	s2_x = s2_x - n_x*m_x*m_x;
+ 
+	for (int i=0;i<n_y;i++){
+                m_y += y[i];
+                s2_y += y[i]*y[i];
+        }
+        m_y = m_y / n_y;
+        s2_y = s2_y - n_y*m_y*m_y;
+	
+	double S = sqrt( (s2_x + s2_y)*(n_x+n_y)/( (n_x+n_y-2)*n_x*n_y ) );
+	t = (m_x - m_y) / S;
+	return t;
+}
+double getTstat_var_equal_ref (double *x, int n_x, double y_avg, double y_var, int n_y)
+{
+	double t = sqrt(-1);
+        if (n_x + n_y <= 2) return t;
+
+	double m_x = 0;
+        double s2_x = 0;
+        for (int i=0;i<n_x;i++){
+                m_x += x[i];
+                s2_x += x[i]*x[i];
+        }
+        m_x = m_x / n_x;
+        s2_x = s2_x - n_x*m_x*m_x;
+
+	double S = sqrt( (s2_x + n_y*y_var)*(n_x+n_y) /( (n_x+n_y-2)*n_x*n_y ) );
+	t = (y_avg - m_x) / S;
+	return t;
+}
+
 /*-----------------------R API-----------------------*/
+RcppExport SEXP R_API_getTstat_var_equal(SEXP R_x, SEXP R_y)
+{
+	double * x = REAL(R_x);
+	int x_len = Rf_length(R_x);
+	double * y = REAL(R_y);
+	int y_len = Rf_length(R_y);
+
+	return Rcpp::wrap(getTstat_var_equal(x, x_len, y, y_len));
+}
+
+RcppExport SEXP R_API_getZscoreSingleMolecule_CC(SEXP R_IPD_native, SEXP R_IPD_ctrl, SEXP R_mol_id_native, SEXP R_mol_id_ctrl,
+					SEXP R_start_native, SEXP R_start_ctrl)
+{
+	int start_native = INTEGER(R_start_native)[0];
+	int start_ctrl = INTEGER(R_start_ctrl)[0];
+	int shift = start_native - start_ctrl;
+	int len = Rf_length(R_IPD_native);	
+	
+	vector<vector<double> > t_score;
+	for (int i=0;i<len;i++){
+		if ((i+1)%10000==0) Rprintf("processed %d sites\r",i+1);
+		double * ipd_native = REAL(VECTOR_ELT(R_IPD_native,i));
+		int n_ipd_native = Rf_length(VECTOR_ELT(R_IPD_native,i));			
+		double * mol_idx_native = REAL(VECTOR_ELT(R_mol_id_native,i));
+		int n_mol_idx_native = Rf_length(VECTOR_ELT(R_mol_id_native,i));
+
+		int i_ctrl = i + shift;
+		if (i_ctrl<0){
+			vector<double> cur_t_score;
+			cur_t_score.push_back(sqrt(-1));
+			t_score.push_back(cur_t_score);
+			continue;
+		}
+		double * ipd_ctrl = REAL(VECTOR_ELT(R_IPD_ctrl,i_ctrl));
+                int n_ipd_ctrl = Rf_length(VECTOR_ELT(R_IPD_ctrl,i_ctrl));
+                double * mol_idx_ctrl = REAL(VECTOR_ELT(R_mol_id_ctrl,i_ctrl));
+                int n_mol_idx_ctrl = Rf_length(VECTOR_ELT(R_mol_id_ctrl,i_ctrl));
+		
+
+		BayesianMixtureModel BayesianMixtureModel_obj;
+		BayesianMixtureModel_obj.getMoleculeMeanIPD(ipd_native, mol_idx_native, n_ipd_native, n_mol_idx_native);
+		vector <double> ipd_avg_native = BayesianMixtureModel_obj.get_ipd_avg();
+		vector <double> ipd_var_native = BayesianMixtureModel_obj.get_ipd_var();
+		vector <double> ipd_n_native = BayesianMixtureModel_obj.get_ipd_n();
+	
+		int cur_n_mol = ipd_avg_native.size();
+		vector<double> cur_t_score;
+		for (int j=0;j<cur_n_mol;j++){
+			double t = getTstat_var_equal_ref(ipd_ctrl, n_ipd_ctrl, 
+					ipd_avg_native[j], ipd_var_native[j], ipd_n_native[j]);
+			cur_t_score.push_back(t);
+		}
+		t_score.push_back(cur_t_score);
+	}
+	Rprintf("processed %d sites\n",len);
+	return Rcpp::wrap(t_score);
+	//return R_NilValue;
+}
 RcppExport SEXP R_API_BayesianMixtureModel (SEXP R_IPD, SEXP R_idx, SEXP R_theta_0, SEXP R_kappa_0, SEXP R_upsilon_0, SEXP R_tau2_0, 
 				SEXP R_theta_1, SEXP R_kappa_1, SEXP R_upsilon_1, SEXP R_tau2_1, SEXP R_max_iter)
 {
