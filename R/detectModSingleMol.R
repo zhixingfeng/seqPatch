@@ -1,4 +1,20 @@
-getZscoreSingleMolecule.CC <- function(genomeF.native, genomeF.ctrl)
+mergeZscoreSingleMolecule <- function(z.score)
+{
+	z.score.pool <- numeric(0)
+	# forward strand 
+	for (i in 1:length(z.score$pos)){
+		cur.z.score.pool <- unlist(z.score$pos[[i]])
+		z.score.pool <- c(z.score.pool, cur.z.score.pool)
+	}
+	# backward strand 
+	for (i in 1:length(z.score$neg)){
+                cur.z.score.pool <- unlist(z.score$neg[[i]])
+                z.score.pool <- c(z.score.pool, cur.z.score.pool)
+        }
+	z.score.pool
+	
+}
+getZscoreSingleMolecule.CC <- function(genomeF.native, genomeF.ctrl, is.merge=TRUE, is.z=TRUE)
 {
 	z.score <- list()
 	z.score$pos <- list()
@@ -23,7 +39,7 @@ getZscoreSingleMolecule.CC <- function(genomeF.native, genomeF.ctrl)
 			
 		cat(cur.ref, '\n')
 		z.score$pos[[cur.ref]] <- .Call('R_API_getZscoreSingleMolecule_CC', ipd.native, ipd.ctrl,
-			 mol.id.native, mol.id.ctrl, as.integer(start.native), as.integer(start.ctrl))
+			 mol.id.native, mol.id.ctrl, as.integer(start.native), as.integer(start.ctrl), as.integer(is.z))
 	}		
 	
 	# backward strand
@@ -42,17 +58,22 @@ getZscoreSingleMolecule.CC <- function(genomeF.native, genomeF.ctrl)
 		
 		cat(cur.ref, '\n')
                 z.score$neg[[cur.ref]] <- .Call('R_API_getZscoreSingleMolecule_CC', ipd.native, ipd.ctrl,
-                         mol.id.native, mol.id.ctrl, as.integer(start.native), as.integer(start.ctrl))
+                         mol.id.native, mol.id.ctrl, as.integer(start.native), as.integer(start.ctrl), as.integer(is.z))
         }
- 
-	z.score
+	if (is.merge==TRUE)
+		return(mergeZscoreSingleMolecule(z.score))
+	else  
+		return(z.score)
 }
 
-getZscoreSingleMolecule.CC.one.site <- function(x, x.idx, y)
+getZscoreSingleMolecule.CC.one.site <- function(x, x.idx, y, is.z=TRUE)
 {
 	x.group <- split(x,x.idx)
-	sapply(x.group, function(x,y) t.test(x,y,var.equal=TRUE)$stat, y=y)
-
+	if (is.z==TRUE){
+		sapply(x.group, function(x,y) {t.stat <- t.test(x,y,var.equal=TRUE)$stat; t.df=t.test(x,y,var.equal=TRUE)$para;qnorm(pt(t.stat,t.df))}, y=y)
+	}else{
+		sapply(x.group, function(x,y) t.test(x,y,var.equal=TRUE)$stat, y=y)
+	}
 }
 
 

@@ -4,6 +4,7 @@
 #include <Rcpp.h>
 #include <R.h>
 #include <Rinternals.h>
+#include <Rmath.h>
 #include <stdio.h>
 #include "SpecialFuns.h"
 #include "BayesianMixtureModel.h"
