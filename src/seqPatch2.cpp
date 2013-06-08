@@ -73,7 +73,74 @@ double getTstat_var_equal_ref (double *x, int n_x, double y_avg, double y_var, i
 	return t;
 }
 
+vector<int> bin_search(double query, double *temp, int temp_len)
+{
+	vector<int> idx_pair(2,-1);
+	if (temp_len<2) return idx_pair;
+	temp_len--;	
+	idx_pair[0] = 0;
+	idx_pair[1] = temp_len;
+	
+	if (query<temp[0]){
+		idx_pair[1] = 0;
+		return idx_pair;
+	}	
+	if (query>temp[temp_len]){
+		idx_pair[0] = temp_len;
+                return idx_pair;
+	}
+	// assume temp is sorted (small to large)
+	while (1){
+		//Rprintf("<%d,%d>\n",idx_pair[0], idx_pair[1]);
+		int cur_idx = idx_pair[0] + int((idx_pair[1] - idx_pair[0])/2.0);
+		//Rprintf("cur_idx %d\n",cur_idx);	
+		if (query <= temp[cur_idx]) 
+			idx_pair[1] = cur_idx;
+		else 
+			idx_pair[0] = cur_idx;		
+
+		if (idx_pair[1]-idx_pair[0]==1 || idx_pair[0]==temp_len || idx_pair[1]==0 )
+			break;	
+	
+	}
+	//Rprintf("finish\n");	
+	return idx_pair;
+}
+
+
 /*-----------------------R API-----------------------*/
+RcppExport SEXP R_API_bin_search(SEXP R_query, SEXP R_temp, SEXP R_temp_len)
+{
+	double query = REAL(R_query)[0];
+	double *temp = REAL(R_temp);
+	int temp_len = INTEGER(R_temp_len)[0];			
+	//return R_NilValue;
+	vector<int> rl = bin_search(query, temp, temp_len);
+	Rprintf("<%d,%d>\n",rl[0],rl[1]);
+	return R_NilValue;
+	//Rcpp::wrap(rl);
+	
+}
+
+RcppExport SEXP R_API_unlist(SEXP x)
+{
+	vector<double> z;
+	vector<double> idx;
+	map<string, vector<double> > rl;
+	rl["z"] = z;
+	rl["idx"] = idx;
+	int len = Rf_length(x);
+	for (int i=0;i<len;i++){
+		double * cur_x = REAL(VECTOR_ELT(x,i));
+		int cur_x_len = Rf_length(VECTOR_ELT(x,i));
+		for (int j=0;j<cur_x_len;j++){
+			rl["z"].push_back(cur_x[j]);
+			rl["idx"].push_back(i+1);
+		}	
+	}	
+	return Rcpp::wrap(rl);	
+}
+
 RcppExport SEXP R_API_getTstat_var_equal(SEXP R_x, SEXP R_y)
 {
 	double * x = REAL(R_x);
@@ -84,6 +151,62 @@ RcppExport SEXP R_API_getTstat_var_equal(SEXP R_x, SEXP R_y)
 	return Rcpp::wrap(getTstat_var_equal(x, x_len, y, y_len));
 }
 
+RcppExport SEXP R_API_getLocfdrSingleMolecule(SEXP R_z, SEXP R_x, SEXP R_fdr)
+{	
+	double *x = REAL(R_x);
+	int x_len = Rf_length(R_x);
+	double *fdr = REAL(R_fdr);
+	int fdr_len = Rf_length(R_fdr);
+	if (x_len != fdr_len){
+		Rprintf("length of x and fdr should be the same\n");
+		return R_NilValue;
+	}
+	
+	vector<vector<double> > z_fdr;
+	int z_len = Rf_length(R_z);	
+	for (int i=0;i<z_len;i++){
+		if ((i+1)%100000==0) Rprintf("processed %d sites\r", i+1);
+		vector<double> cur_z_fdr;
+		double *cur_z = REAL(VECTOR_ELT(R_z,i));
+		int cur_z_len = Rf_length(VECTOR_ELT(R_z,i));
+		for (int j=0;j<cur_z_len;j++){
+			// remove NaN
+			if (cur_z[j]!=cur_z[j]){
+				cur_z_fdr.push_back(sqrt(-1));
+				continue;
+			}
+			// remove Inf
+			if (cur_z[j]>1e12){
+				cur_z_fdr.push_back(sqrt(-1));
+				continue;
+			}
+			// get fdr
+			if (cur_z[j]<0){
+				cur_z_fdr.push_back(1);
+				continue;
+			}
+			vector<int> idx_pair = bin_search(cur_z[j], x, x_len);
+			if (idx_pair[1]==0){
+				cur_z_fdr.push_back(fdr[0]);
+				continue;
+			}
+			if (idx_pair[0]==fdr_len-1){
+                                cur_z_fdr.push_back(fdr[fdr_len-1]);
+                                continue;
+                        }
+			double fdr_pred = fdr[idx_pair[0]]+(cur_z[j] - x[idx_pair[0]])* 
+					(fdr[idx_pair[1]] - fdr[idx_pair[0]]) / (x[idx_pair[1]] - x[idx_pair[0]]);
+			cur_z_fdr.push_back(fdr_pred);
+		}
+		z_fdr.push_back(cur_z_fdr);	
+	}
+	Rprintf("processed %d sites\n", z_len);
+	return Rcpp::wrap(z_fdr);
+	/*double *z = REAL(R_z);
+	Rprintf("%lf\n",z[0]);
+	if (z[0]>=1e12) Rprintf("yes");*/
+	//return R_NilValue;
+}
 RcppExport SEXP R_API_getZscoreSingleMolecule_CC(SEXP R_IPD_native, SEXP R_IPD_ctrl, SEXP R_mol_id_native, SEXP R_mol_id_ctrl,
 					SEXP R_start_native, SEXP R_start_ctrl, SEXP R_is_z)
 {

@@ -1,3 +1,22 @@
+#mergeZscoreSingleMolecule <- function(z.score)
+#{
+#        z.score.pool <- numeric(0)
+#	idx.pool <- numeric(0)
+        # forward strand
+#        for (i in 1:length(z.score$pos)){
+#                cur.z.score.pool <- .Call('R_API_unlist', z.score$pos[[i]])	
+#		z.score.pool <- c(z.score.pool, cur.z.score.pool$z)
+#		idx.pool <- c(idx.pool, cur.z.score.pool$idx)
+#        }
+        # backward strand
+#        for (i in 1:length(z.score$neg)){
+#                cur.z.score.pool <- .Call('R_API_unlist', z.score$neg[[i]])
+#                z.score.pool <- c(z.score.pool, cur.z.score.pool$z)
+#        	idx.pool <- c(idx.pool, cur.z.score.pool$idx)
+#	}
+#        z.score.pool
+#}
+
 mergeZscoreSingleMolecule <- function(z.score)
 {
 	z.score.pool <- numeric(0)
@@ -11,8 +30,30 @@ mergeZscoreSingleMolecule <- function(z.score)
                 cur.z.score.pool <- unlist(z.score$neg[[i]])
                 z.score.pool <- c(z.score.pool, cur.z.score.pool)
         }
-	z.score.pool
+	z.score.pool	
+}
+getLocfdrSingleMolecule <- function(z.score, x, fdr)
+{
+	fdr.all <- list()
+	fdr.all$pos <- list()
+	fdr.all$neg <- list()
 	
+	# forward strand 
+	cat('forward strand\n')
+	for (i in 1:length(z.score$pos)){
+		cur.ref <- names(z.score$pos[i])
+		cat(cur.ref,'\n')
+		fdr.all$pos[[cur.ref]] <- .Call('R_API_getLocfdrSingleMolecule', z.score$pos[[i]], x, fdr)
+	}				
+
+	# backward strand
+	cat('backward strand\n')
+        for (i in 1:length(z.score$neg)){
+                cur.ref <- names(z.score$neg[i])
+		cat(cur.ref,'\n')
+                fdr.all$neg[[cur.ref]] <- .Call('R_API_getLocfdrSingleMolecule', z.score$neg[[i]], x, fdr)
+        }
+	fdr.all
 }
 getZscoreSingleMolecule.CC <- function(genomeF.native, genomeF.ctrl, is.merge=TRUE, is.z=TRUE)
 {
