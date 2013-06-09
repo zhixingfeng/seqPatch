@@ -27,10 +27,15 @@ Install seqPatch
 ================
 R CMD INSTALL downloaded_folder_name
 
+Reference 
+================
+http://www.ploscompbiol.org/article/info%3Adoi%2F10.1371%2Fjournal.pcbi.1002935
 
 A real example
 ==============
 https://xfengz02.u.hpc.mssm.edu/example_release.tar.gz
+
+The example implements "Detecting DNA modifications in E.coli K-12" section in the reference
 
 Upcoming features
 =================
