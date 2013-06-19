@@ -266,7 +266,9 @@ RcppExport SEXP R_API_BayesianMixtureModel (SEXP R_IPD, SEXP R_idx, SEXP R_theta
 				SEXP R_theta_1, SEXP R_kappa_1, SEXP R_upsilon_1, SEXP R_tau2_1, SEXP R_max_iter)
 {
 	BayesianMixtureModel_NC BayesianMixtureModelObj;
-	BayesianMixtureModelObj.setHyperParametersNull(REAL(R_theta_0)[0], REAL(R_kappa_0)[0], REAL(R_upsilon_0)[0], REAL(R_tau2_0)[0]);
+	//BayesianMixtureModelObj.setHyperParametersNull(REAL(R_theta_0)[0], REAL(R_kappa_0)[0], REAL(R_upsilon_0)[0], REAL(R_tau2_0)[0]);
+	BayesianMixtureModelObj.setHyperParameters(REAL(R_theta_0)[0], REAL(R_kappa_0)[0], REAL(R_upsilon_0)[0], REAL(R_tau2_0)[0],
+						REAL(R_theta_1)[0], REAL(R_kappa_1)[0], REAL(R_upsilon_1)[0], REAL(R_tau2_1)[0]);
 	BayesianMixtureModelObj.getMoleculeMeanIPD(REAL(R_IPD), REAL(R_idx), Rf_length(R_IPD), Rf_length(R_idx));
 	BayesianMixtureModelObj.run(INTEGER(R_max_iter)[0]);		
 	
@@ -389,7 +391,9 @@ RcppExport SEXP R_API_DetectModProp_NC(SEXP R_IPD, SEXP R_idx, SEXP R_genome_sta
 		tau2_0[i] = it->second["tau2"];
 		
 		// fit Bayesian Mixture Model	
-		BayesianMixtureModelObj.setHyperParametersNull(theta_0[i], kappa_0[i], upsilon_0[i], tau2_0[i]);
+		//BayesianMixtureModelObj.setHyperParametersNull(theta_0[i], kappa_0[i], upsilon_0[i], tau2_0[i]);
+		BayesianMixtureModelObj.setHyperParameters(theta_0[i], kappa_0[i]+10000, upsilon_0[i]+1000, tau2_0[i],
+							theta_0[i],0.0001,0.0001,tau2_0[i]);
 		BayesianMixtureModelObj.getMoleculeMeanIPD(&cur_IPD[0], &cur_idx[0], cur_IPD.size(), cur_idx.size());
 		BayesianMixtureModelObj.run(max_iter);
 		

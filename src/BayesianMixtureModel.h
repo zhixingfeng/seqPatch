@@ -20,14 +20,16 @@ class BayesianMixtureModel
 		}	
 
 		// set hyperparameters
-		bool setHyperParametersNull(double _theta_0, double _kappa_0, double _upsilon_0, double _tau2_0)
+		bool setHyperParameters(double _theta_0, double _kappa_0, double _upsilon_0, double _tau2_0,
+				double _theta_1, double _kappa_1, double _upsilon_1, double _tau2_1)
 		{
 			// load hyperparameters
-			theta_0 = _theta_0; kappa_0 = _kappa_0 + 10000; upsilon_0 = _upsilon_0 + 10000; tau2_0 = _tau2_0;
-			//theta_1 = theta_0 + 2;
+			/*theta_0 = _theta_0; kappa_0 = _kappa_0 + 10000; upsilon_0 = _upsilon_0 + 10000; tau2_0 = _tau2_0;
 			theta_1 = theta_0 ;
-			upsilon_1 = _upsilon_0; tau2_1 = _tau2_0;
+			upsilon_1 = _upsilon_0; tau2_1 = _tau2_0;*/
 			
+			theta_0 = _theta_0; kappa_0 = _kappa_0; upsilon_0 = _upsilon_0; tau2_0 = _tau2_0;
+			theta_1 = _theta_1; kappa_1 = _kappa_1; upsilon_1 = _upsilon_1; tau2_1 = _tau2_1;
 			// clear distribution parameters			
 			theta_0_t.clear(); theta_1_t.clear();
 			kappa_0_t.clear(); kappa_1_t.clear();
