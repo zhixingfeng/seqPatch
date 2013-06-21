@@ -288,7 +288,11 @@ RcppExport SEXP R_API_BayesianMixtureModel (SEXP R_IPD, SEXP R_idx, SEXP R_theta
                                 Rcpp::Named("N_gamma_1_t")=Rcpp::wrap(BayesianMixtureModelObj.get_N_gamma_1_t_track()),
 		
 				Rcpp::Named("gamma_0")=Rcpp::wrap(BayesianMixtureModelObj.get_gamma_0()),
-				Rcpp::Named("gamma_1")=Rcpp::wrap(BayesianMixtureModelObj.get_gamma_1()));		
+				Rcpp::Named("gamma_1")=Rcpp::wrap(BayesianMixtureModelObj.get_gamma_1()),
+				
+				Rcpp::Named("ipd_avg")=Rcpp::wrap(BayesianMixtureModelObj.get_ipd_avg()),
+				Rcpp::Named("ipd_n")=Rcpp::wrap(BayesianMixtureModelObj.get_ipd_n()),
+				Rcpp::Named("ipd_var")=Rcpp::wrap(BayesianMixtureModelObj.get_ipd_var()));		
 
       	return R_NilValue;
 }

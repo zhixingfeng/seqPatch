@@ -87,8 +87,8 @@ bool BayesianMixtureModel_NC::run(int max_iter)
 			E_var_norm_1 = 1/kappa_1_t[t-1] + (pow(theta_1_t[t-1] - ipd_avg[i], 2) + ipd_var[i])/tau2_1_t[t-1];
 			//printf("E_var_norm_0 : %lf, E_var_norm_1 : %lf\n", E_var_norm_0, E_var_norm_1);
 			
-			log_rho_0 = E_log_1_p - E_var_norm_0 - E_log_sigma2_0;
-			log_rho_1 = E_log_p - E_var_norm_1 - E_log_sigma2_1;
+			log_rho_0 = E_log_1_p - ipd_n[i]*E_var_norm_0 / 2 - ipd_n[i]*E_log_sigma2_0 / 2;
+			log_rho_1 = E_log_p - ipd_n[i]*E_var_norm_1 / 2 - ipd_n[i]*E_log_sigma2_1 / 2;
 
 			// estimate gamma_0 and gamma_1
 			if (log_rho_1 - log_rho_0 >= 40)
