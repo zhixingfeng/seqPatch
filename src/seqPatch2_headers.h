@@ -1,6 +1,7 @@
 #ifndef SEQPATH2_HEADERS_H
 #define SEQPATH2_HEADERS_H
 
+#include "math_utils.h"
 #include <Rcpp.h>
 #include <R.h>
 #include <Rinternals.h>
@@ -15,6 +16,8 @@ map<string, vector<double> > hieModelEB(vector<double> & ipd_ref_mean, vector<do
 string SP_reverseSeq(const string &seq);
 
 int getIdxByName (SEXP data, string query);
+
+
 
 
 using namespace std;

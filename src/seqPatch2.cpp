@@ -297,10 +297,134 @@ RcppExport SEXP R_API_BayesianMixtureModel (SEXP R_IPD, SEXP R_idx, SEXP R_theta
       	return R_NilValue;
 }
 
+RcppExport SEXP R_API_DetectModProp_CC(SEXP R_IPD, SEXP R_idx, SEXP R_IPD_ctrl, SEXP R_genome_start, SEXP R_genome_start_ctrl, SEXP R_max_iter)
+{
+        /*---------------------check inputs---------------------*/
+
+	if (Rf_length(R_IPD)!=Rf_length(R_idx)){
+                Rprintf("inconsistent IPD and moleculeID.\n");
+                return R_NilValue;
+        }
+	/*---------------- load data and parameters -----------------------*/
+
+	int genome_start = INTEGER(R_genome_start)[0];
+	int genome_start_ctrl = INTEGER(R_genome_start_ctrl)[0];
+	int max_iter = INTEGER(R_max_iter)[0];
+	
+	int shift = genome_start - genome_start_ctrl;
+
+	/*------------ initialized results that need to be recorded ----------*/
+
+	// prior distribution parameters ( " *_0 " for null distribution and " *_1 " for alternative(modified) distribution )
+	vector<double> theta_0(Rf_length(R_IPD), sqrt(-1)); 
+	vector<double> kappa_0(Rf_length(R_IPD), sqrt(-1)); 
+	vector<double> upsilon_0(Rf_length(R_IPD), sqrt(-1)); 
+	vector<double> tau2_0(Rf_length(R_IPD), sqrt(-1));
+	
+	// posterior distribution parameters
+	vector<double> theta_0_t(Rf_length(R_IPD), sqrt(-1)); vector<double> theta_1_t(Rf_length(R_IPD), sqrt(-1));
+        vector<double> kappa_0_t(Rf_length(R_IPD), sqrt(-1)); vector<double> kappa_1_t(Rf_length(R_IPD), sqrt(-1));
+        vector<double> upsilon_0_t(Rf_length(R_IPD), sqrt(-1)); vector<double> upsilon_1_t(Rf_length(R_IPD), sqrt(-1));
+        vector<double> tau2_0_t(Rf_length(R_IPD), sqrt(-1)); vector<double> tau2_1_t(Rf_length(R_IPD), sqrt(-1));
+
+	vector<double> N_0_t(Rf_length(R_IPD), sqrt(-1)); vector<double> N_1_t(Rf_length(R_IPD), sqrt(-1));
+	vector<double> N_gamma_0_t(Rf_length(R_IPD), sqrt(-1)); vector<double> N_gamma_1_t(Rf_length(R_IPD), sqrt(-1));
+
+	vector<double> prop_mod(Rf_length(R_IPD), sqrt(-1));
+	
+	// number of iteration, coverge 
+	vector<double> n_steps(Rf_length(R_IPD), sqrt(-1));
+	vector<double> cvg(Rf_length(R_IPD), sqrt(-1));	
+	
+	/*----------------- run ------------------*/
+	Rprintf("run.\n");
+	BayesianMixtureModel_NC BayesianMixtureModelObj;
+	int genome_size = Rf_length(R_IPD);
+	for (int i=0;i<genome_size;i++){
+		if ((i+1)%10000==0) Rprintf("detected %d positions\r", i+1);
+		if (i + shift<0 || i+shift>=Rf_length(R_IPD_ctrl)) continue;
+		
+		// check data and load IPD and moleculeID
+		if (Rf_length(VECTOR_ELT(R_IPD,i)) != Rf_length(VECTOR_ELT(R_idx,i))){
+			Rprintf("in the %dth position: inconsistent IPD and moleculeID length.\n",i+1);
+			return R_NilValue;
+		}
+		vector<double> cur_IPD(REAL(VECTOR_ELT(R_IPD,i)), REAL(VECTOR_ELT(R_IPD,i)) + Rf_length(VECTOR_ELT(R_IPD,i)));
+		vector<double> cur_idx(REAL(VECTOR_ELT(R_idx,i)), REAL(VECTOR_ELT(R_idx,i)) + Rf_length(VECTOR_ELT(R_idx,i)));		
+		vector<double> cur_IPD_ctrl(REAL(VECTOR_ELT(R_IPD_ctrl,i+shift)), REAL(VECTOR_ELT(R_IPD_ctrl,i+shift)) + Rf_length(VECTOR_ELT(R_IPD_ctrl,i+shift)));
+		
+		// get prior from control data 
+		if (cur_IPD.size() < 3 || cur_IPD_ctrl.size() < 3 ) continue;
+		theta_0[i] = mean(cur_IPD_ctrl);
+		kappa_0[i] = 1000000;
+		upsilon_0[i] = 1000000;
+		tau2_0[i] = var(cur_IPD_ctrl);
+		
+		// fit Bayesian Mixture Model
+		BayesianMixtureModelObj.setHyperParameters(theta_0[i], kappa_0[i], upsilon_0[i], tau2_0[i],
+							theta_0[i],0.0001,upsilon_0[i],tau2_0[i]);
+		BayesianMixtureModelObj.getMoleculeMeanIPD(&cur_IPD[0], &cur_idx[0], cur_IPD.size(), cur_idx.size());
+		BayesianMixtureModelObj.run(max_iter);
+
+		// get results	
+		theta_0_t[i] = BayesianMixtureModelObj.get_theta_0_t();
+		kappa_0_t[i] = BayesianMixtureModelObj.get_kappa_0_t();							
+		upsilon_0_t[i] = BayesianMixtureModelObj.get_upsilon_0_t();
+		tau2_0_t[i] = BayesianMixtureModelObj.get_tau2_0_t();
+
+		theta_1_t[i] = BayesianMixtureModelObj.get_theta_1_t();
+                kappa_1_t[i] = BayesianMixtureModelObj.get_kappa_1_t();
+                upsilon_1_t[i] = BayesianMixtureModelObj.get_upsilon_1_t();
+                tau2_1_t[i] = BayesianMixtureModelObj.get_tau2_1_t();
+
+		N_0_t[i] = BayesianMixtureModelObj.get_N_0_t();	
+		N_1_t[i] = BayesianMixtureModelObj.get_N_1_t();
+
+		N_gamma_0_t[i] = BayesianMixtureModelObj.get_N_gamma_0_t();
+                N_gamma_1_t[i] = BayesianMixtureModelObj.get_N_gamma_1_t();
+
+		prop_mod[i] = N_1_t[i] / (N_0_t[i] + N_1_t[i]);
+
+		n_steps[i] = BayesianMixtureModelObj.get_n_steps();
+
+		cvg[i] = cur_IPD.size();	
+	}	
+	Rprintf("detected %d positions\n", genome_size);
+
+	/*--------------------- output --------------------------*/
+	map<string,vector<double> > rl;
+	rl["theta_0"] = theta_0;
+	rl["kappa_0"] = kappa_0;
+	rl["upsilon_0"] = upsilon_0;
+	rl["tau2_0"] = tau2_0;
+
+	rl["theta_0_t"] = theta_0_t;
+        rl["kappa_0_t"] = kappa_0_t;
+        rl["upsilon_0_t"] = upsilon_0_t;
+        rl["tau2_0_t"] = tau2_0_t;
+
+	rl["theta_1_t"] = theta_1_t;
+        rl["kappa_1_t"] = kappa_1_t;
+        rl["upsilon_1_t"] = upsilon_1_t;
+        rl["tau2_1_t"] = tau2_1_t;
+
+	rl["N_0_t"] = N_0_t;
+        rl["N_1_t"] = N_1_t;
+        rl["N_gamma_0_t"] = N_gamma_0_t;
+        rl["N_gamma_1_t"] = N_gamma_1_t;
+        
+	rl["prop_mod"] = prop_mod;
+       	rl["n_steps"] = n_steps;
+        rl["cvg"] = cvg;
+
+	return Rcpp::wrap(rl);
+	//return R_NilValue;
+}
+
 RcppExport SEXP R_API_DetectModProp_NC(SEXP R_IPD, SEXP R_idx, SEXP R_genome_start, SEXP R_genomeSeq, SEXP R_context_hyperPara,
 				 SEXP R_context, SEXP R_strand, SEXP R_left_len, SEXP R_right_len, SEXP R_max_iter)
 {
-	/*---------------------check validation of inputs---------------------*/
+	/*---------------------check inputs---------------------*/
 	if (Rf_length(R_IPD)!=Rf_length(R_idx)){
 		Rprintf("inconsistent IPD and moleculeID.\n");
 		return R_NilValue;

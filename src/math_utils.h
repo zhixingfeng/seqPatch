@@ -397,7 +397,7 @@ inline double stddev(const vector<double> &data) {
 
 
 //  The following code is written by Zhixing Feng
-vector<double> filter_outlier(vector<double> &data, double k = 2.5, string tail="right")
+inline vector<double> filter_outlier(vector<double> &data, double k = 2.5, string tail="right")
 {
 	sort(data.begin(), data.end());
 	int bd = int( data.size() * 0.25);
