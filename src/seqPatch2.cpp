@@ -251,7 +251,7 @@ RcppExport SEXP R_API_getZscoreSingleMolecule_CC(SEXP R_IPD_native, SEXP R_IPD_c
 			if (is_z!=0){
 				double df = n_ipd_ctrl + ipd_n_native[j] - 2;
 				if (df < 0) t = sqrt(-1);
-				else t = Rf_qnorm5(Rf_pt(t, df, 1,0), 0, 1, 1, 0);
+				else t = Rf_qnorm5(Rf_pt(t, df, 1, 1), 0, 1, 1, 1);
 			}
 			cur_t_score.push_back(t);
 		}
@@ -362,7 +362,7 @@ RcppExport SEXP R_API_DetectModProp_CC(SEXP R_IPD, SEXP R_idx, SEXP R_IPD_ctrl, 
 		
 		// fit Bayesian Mixture Model
 		BayesianMixtureModelObj.setHyperParameters(theta_0[i], kappa_0[i], upsilon_0[i], tau2_0[i],
-							theta_0[i],0.0001,upsilon_0[i],tau2_0[i]);
+							theta_0[i]+1.5,500,upsilon_0[i],tau2_0[i]);
 		BayesianMixtureModelObj.getMoleculeMeanIPD(&cur_IPD[0], &cur_idx[0], cur_IPD.size(), cur_idx.size());
 		BayesianMixtureModelObj.run(max_iter);
 
