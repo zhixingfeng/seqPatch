@@ -73,7 +73,7 @@ double getTstat_var_equal(double * x, int n_x, double * y, int n_y)
 	return t;
 }
 */
-double getTstat_var_equal_ref (double x_avg, int x_var, int n_x, double y_avg, double y_var, int n_y)
+double getTstat_var_equal_ref (double x_avg, double x_var, int n_x, double y_avg, double y_var, int n_y)
 {
 	double t = sqrt(-1);
         if (n_x + n_y <= 2) return t;
@@ -272,11 +272,8 @@ RcppExport SEXP R_API_getZscoreSingleMolecule_CC(SEXP R_IPD_native, SEXP R_IPD_c
 		for (int j=0;j<cur_n_mol;j++){
 			double t;
 			if (is_delta == 1){
-			 	//t = ipd_avg_native[j] - ipd_avg_ctrl;
-				t = ipd_var_ctrl;	
+			 	t = ipd_avg_native[j] - ipd_avg_ctrl;
 			}else{
-				//t = getTstat_var_equal_ref(ipd_ctrl, n_ipd_ctrl, 
-				//		ipd_avg_native[j], ipd_var_native[j], ipd_n_native[j]);
 				t = getTstat_var_equal_ref(ipd_avg_native[j], ipd_var_native[j], ipd_n_native[j],
 						ipd_avg_ctrl, ipd_var_ctrl, n_ipd_ctrl);
 				if (is_z!=0){

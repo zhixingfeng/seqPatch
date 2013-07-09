@@ -55,7 +55,7 @@ getLocfdrSingleMolecule <- function(z.score, x, fdr)
         }
 	fdr.all
 }
-getZscoreSingleMolecule.CC <- function(genomeF.native, genomeF.ctrl, is.merge=TRUE, is.z=TRUE, is.delta=FALSE)
+getZscoreSingleMolecule.CC <- function(genomeF.native, genomeF.ctrl, is.merge=FALSE, is.z=TRUE, is.delta=FALSE)
 {
 	z.score <- list()
 	z.score$pos <- list()
