@@ -362,7 +362,7 @@ RcppExport SEXP R_API_DetectModProp_CC(SEXP R_IPD, SEXP R_idx, SEXP R_IPD_ctrl, 
 		
 		// fit Bayesian Mixture Model
 		BayesianMixtureModelObj.setHyperParameters(theta_0[i], kappa_0[i], upsilon_0[i], tau2_0[i],
-							theta_0[i],0.0001,upsilon_0[i],tau2_0[i]);
+							theta_0[i],1/10000,upsilon_0[i],tau2_0[i]);
 		BayesianMixtureModelObj.getMoleculeMeanIPD(&cur_IPD[0], &cur_idx[0], cur_IPD.size(), cur_idx.size());
 		BayesianMixtureModelObj.run(max_iter);
 
