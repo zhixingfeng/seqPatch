@@ -391,6 +391,27 @@ inline double var(const vector<double> &data) {
 	return (sum2 - sum1 * sum1 / (int)data.size()) / ((int)data.size() - 1);
 }
 
+inline double mean_c(double * data, int n)
+{
+	double rl = 0;
+	for (int i=0;i<n;i++){
+		rl += data[i];
+	}
+	return rl/n;
+}
+
+inline double var_c(double *data, int n)
+{
+	double sum1 = 0, sum2 = 0;
+        for (int i = 0; i < n; i++) {
+                sum1 += data[i];
+                sum2 += data[i] * data[i];
+        }
+
+        return (sum2 - sum1 * sum1 / n ) / (n - 1);
+
+}
+
 inline double stddev(const vector<double> &data) {
 	return sqrt(var(data));
 }

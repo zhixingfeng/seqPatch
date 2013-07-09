@@ -54,7 +54,7 @@ double getTstat_var_equal(double * x, int n_x, double * y, int n_y)
 	t = (m_x - m_y) / S;
 	return t;
 }
-double getTstat_var_equal_ref (double *x, int n_x, double y_avg, double y_var, int n_y)
+/*double getTstat_var_equal_ref (double *x, int n_x, double y_avg, double y_var, int n_y)
 {
 	double t = sqrt(-1);
         if (n_x + n_y <= 2) return t;
@@ -72,6 +72,17 @@ double getTstat_var_equal_ref (double *x, int n_x, double y_avg, double y_var, i
 	t = (y_avg - m_x) / S;
 	return t;
 }
+*/
+double getTstat_var_equal_ref (double x_avg, int x_var, int n_x, double y_avg, double y_var, int n_y)
+{
+	double t = sqrt(-1);
+        if (n_x + n_y <= 2) return t;
+        
+	double S = sqrt( (n_x*x_var + n_y*y_var)*(n_x+n_y) /( (n_x+n_y-2)*n_x*n_y ) );
+        t = (x_avg - y_avg) / S;
+        return t;
+}
+
 
 vector<int> bin_search(double query, double *temp, int temp_len)
 {
@@ -207,14 +218,16 @@ RcppExport SEXP R_API_getLocfdrSingleMolecule(SEXP R_z, SEXP R_x, SEXP R_fdr)
 	if (z[0]>=1e12) Rprintf("yes");*/
 	//return R_NilValue;
 }
+
 RcppExport SEXP R_API_getZscoreSingleMolecule_CC(SEXP R_IPD_native, SEXP R_IPD_ctrl, SEXP R_mol_id_native, SEXP R_mol_id_ctrl,
-					SEXP R_start_native, SEXP R_start_ctrl, SEXP R_is_z)
+					SEXP R_start_native, SEXP R_start_ctrl, SEXP R_is_z, SEXP R_is_delta)
 {
 	int start_native = INTEGER(R_start_native)[0];
 	int start_ctrl = INTEGER(R_start_ctrl)[0];
 	int shift = start_native - start_ctrl;
 	int len = Rf_length(R_IPD_native);	
 	int is_z = INTEGER(R_is_z)[0];	
+	int is_delta = INTEGER(R_is_delta)[0];
 
 	vector<vector<double> > t_score;
 	for (int i=0;i<len;i++){
@@ -236,6 +249,17 @@ RcppExport SEXP R_API_getZscoreSingleMolecule_CC(SEXP R_IPD_native, SEXP R_IPD_c
                 double * mol_idx_ctrl = REAL(VECTOR_ELT(R_mol_id_ctrl,i_ctrl));
                 int n_mol_idx_ctrl = Rf_length(VECTOR_ELT(R_mol_id_ctrl,i_ctrl));
 		
+		double ipd_avg_ctrl;
+		double ipd_var_ctrl;
+		if (n_ipd_ctrl < 2){
+			ipd_avg_ctrl = sqrt(-1);
+			ipd_var_ctrl = sqrt(-1);	
+		}else{
+			ipd_avg_ctrl = mean_c(ipd_ctrl, n_ipd_ctrl);
+			ipd_var_ctrl = (n_ipd_ctrl - 1)*var_c(ipd_ctrl, n_ipd_ctrl)/n_ipd_ctrl;
+		}
+			
+	
 
 		BayesianMixtureModel BayesianMixtureModel_obj;
 		BayesianMixtureModel_obj.getMoleculeMeanIPD(ipd_native, mol_idx_native, n_ipd_native, n_mol_idx_native);
@@ -246,13 +270,21 @@ RcppExport SEXP R_API_getZscoreSingleMolecule_CC(SEXP R_IPD_native, SEXP R_IPD_c
 		int cur_n_mol = ipd_avg_native.size();
 		vector<double> cur_t_score;
 		for (int j=0;j<cur_n_mol;j++){
-			double t = getTstat_var_equal_ref(ipd_ctrl, n_ipd_ctrl, 
-					ipd_avg_native[j], ipd_var_native[j], ipd_n_native[j]);
-			if (is_z!=0){
-				double df = n_ipd_ctrl + ipd_n_native[j] - 2;
-				if (df < 0) t = sqrt(-1);
-				else t = Rf_qnorm5(Rf_pt(t, df, 1, 1), 0, 1, 1, 1);
-			}
+			double t;
+			if (is_delta == 1){
+			 	//t = ipd_avg_native[j] - ipd_avg_ctrl;
+				t = ipd_var_ctrl;	
+			}else{
+				//t = getTstat_var_equal_ref(ipd_ctrl, n_ipd_ctrl, 
+				//		ipd_avg_native[j], ipd_var_native[j], ipd_n_native[j]);
+				t = getTstat_var_equal_ref(ipd_avg_native[j], ipd_var_native[j], ipd_n_native[j],
+						ipd_avg_ctrl, ipd_var_ctrl, n_ipd_ctrl);
+				if (is_z!=0){
+					double df = n_ipd_ctrl + ipd_n_native[j] - 2;
+					if (df < 0) t = sqrt(-1);
+					else t = Rf_qnorm5(Rf_pt(t, df, 1, 1), 0, 1, 1, 1);
+				}
+			}	
 			cur_t_score.push_back(t);
 		}
 		t_score.push_back(cur_t_score);

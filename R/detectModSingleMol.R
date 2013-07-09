@@ -55,7 +55,7 @@ getLocfdrSingleMolecule <- function(z.score, x, fdr)
         }
 	fdr.all
 }
-getZscoreSingleMolecule.CC <- function(genomeF.native, genomeF.ctrl, is.merge=TRUE, is.z=TRUE)
+getZscoreSingleMolecule.CC <- function(genomeF.native, genomeF.ctrl, is.merge=TRUE, is.z=TRUE, is.delta=FALSE)
 {
 	z.score <- list()
 	z.score$pos <- list()
@@ -80,7 +80,8 @@ getZscoreSingleMolecule.CC <- function(genomeF.native, genomeF.ctrl, is.merge=TR
 			
 		cat(cur.ref, '\n')
 		z.score$pos[[cur.ref]] <- .Call('R_API_getZscoreSingleMolecule_CC', ipd.native, ipd.ctrl,
-			 mol.id.native, mol.id.ctrl, as.integer(start.native), as.integer(start.ctrl), as.integer(is.z))
+			 mol.id.native, mol.id.ctrl, as.integer(start.native), as.integer(start.ctrl), as.integer(is.z),
+			as.integer(is.delta))
 	}		
 	
 	# backward strand
@@ -99,7 +100,8 @@ getZscoreSingleMolecule.CC <- function(genomeF.native, genomeF.ctrl, is.merge=TR
 		
 		cat(cur.ref, '\n')
                 z.score$neg[[cur.ref]] <- .Call('R_API_getZscoreSingleMolecule_CC', ipd.native, ipd.ctrl,
-                         mol.id.native, mol.id.ctrl, as.integer(start.native), as.integer(start.ctrl), as.integer(is.z))
+                         mol.id.native, mol.id.ctrl, as.integer(start.native), as.integer(start.ctrl), as.integer(is.z),
+			as.integer(is.delta))
         }
 	if (is.merge==TRUE)
 		return(mergeZscoreSingleMolecule(z.score))
