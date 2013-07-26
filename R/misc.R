@@ -1,3 +1,7 @@
+hist.h <- function(x)
+{
+
+}
 write.genomeFtoCSV <- function(genomeF, dir, prefix='csv_data')
 {
 	if (any(names(genomeF$features$ipd_pos)!=names(genomeF$genome.start.pos)) | 

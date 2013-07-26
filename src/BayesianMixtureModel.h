@@ -5,8 +5,9 @@
 #include <math.h>
 #include "SpecialFuns.h"
 #include "stl.h"
+#ifndef ERR
 #define ERR 1e-10
-
+#endif
 class BayesianMixtureModel
 {
 	public:

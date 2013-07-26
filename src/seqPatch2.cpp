@@ -120,17 +120,50 @@ vector<int> bin_search(double query, double *temp, int temp_len)
 
 
 /*-----------------------R API-----------------------*/
+RcppExport SEXP R_API_EBmixture(SEXP R_z_score, SEXP R_mu_0, SEXP R_sigma_0, SEXP R_f1_x, SEXP R_f1_y, SEXP R_max_iter)
+{
+	vector<double> z_score(REAL(R_z_score), REAL(R_z_score) + Rf_length(R_z_score));
+	double mu_0 = REAL(R_mu_0)[0];
+	double sigma_0 = REAL(R_sigma_0)[0];
+	vector<double> f1_x(REAL(R_f1_x), REAL(R_f1_x) + Rf_length(R_f1_x));
+        vector<double> f1_y(REAL(R_f1_y), REAL(R_f1_y) + Rf_length(R_f1_y));	
+	int max_iter = INTEGER(R_max_iter)[0];	
+
+	EBmixture EBmixtureObj;
+	EBmixtureObj.setParameters(0 , 1, f1_x, f1_y);
+	EBmixtureObj.setData(z_score);
+	EBmixtureObj.setMaxIter(max_iter);
+	EBmixtureObj.run();
+	
+	
+	return Rcpp::List::create(Rcpp::Named("rho_0")=Rcpp::wrap(EBmixtureObj.get_rho_0()),
+				Rcpp::Named("rho_1")=Rcpp::wrap(EBmixtureObj.get_rho_1()),
+				Rcpp::Named("gamma_0")=Rcpp::wrap(EBmixtureObj.get_gamma_0()),
+				Rcpp::Named("gamma_1")=Rcpp::wrap(EBmixtureObj.get_gamma_1()),
+				Rcpp::Named("N_0")=Rcpp::wrap(EBmixtureObj.get_N_0_track()),
+				Rcpp::Named("N_1")=Rcpp::wrap(EBmixtureObj.get_N_1_track()),
+				Rcpp::Named("prop")=Rcpp::wrap(EBmixtureObj.get_prop_track()));
+	
+
+	//return Rcpp::wrap(EBmixtureObj.f0_log(z_score[0]));
+	//return Rcpp::wrap(EBmixtureObj.f1(z_score[0]));	
+	//return Rcpp::wrap(EBmixtureObj.get_f1_y());	
+	//return R_NilValue;	
+}
+
+
+
 RcppExport SEXP R_API_bin_search(SEXP R_query, SEXP R_temp, SEXP R_temp_len)
 {
 	double query = REAL(R_query)[0];
 	double *temp = REAL(R_temp);
 	int temp_len = INTEGER(R_temp_len)[0];			
-	//return R_NilValue;
-	vector<int> rl = bin_search(query, temp, temp_len);
+	//vector<int> rl = bin_search(query, temp, temp_len);
+	EBmixture EBmixtureObj;
+	vector<int> rl = EBmixtureObj.bin_search(query, temp, temp_len);
 	Rprintf("<%d,%d>\n",rl[0],rl[1]);
-	return R_NilValue;
-	//Rcpp::wrap(rl);
-	
+	//return Rcpp::wrap(rl);
+	return R_NilValue;	
 }
 
 RcppExport SEXP R_API_unlist(SEXP x)
