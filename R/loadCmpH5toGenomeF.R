@@ -1,5 +1,9 @@
 loadCmpH5toGenomeF <- function(cmpH5.file, out.dir, n.chunk=10, normalization.method='bySubread', is.use.CCS=TRUE, is.return=FALSE, mapQV.cutoff=255)
 {
+	
+	if (!file.exists(out.dir))
+                dir.create(out.dir, recursive=TRUE)
+
 	mapQV.cutoff <- mapQV.cutoff - 1
 
 	cmpH5 <- PacBioCmpH5(cmpH5.file)
@@ -14,7 +18,7 @@ loadCmpH5toGenomeF <- function(cmpH5.file, out.dir, n.chunk=10, normalization.me
 	}
 	idx.list[[n.chunk]] <- ((n.chunk-1)*chunk.size+1):n.subread
 		
-		
+			
 	### load data form each chunk
 	for (i in 1:n.chunk ){
 		alnsF.cur <- getAlignmentsWithFeatures(cmpH5, idx=idx.list[[i]], fxs=list(IPD=getIPD))
