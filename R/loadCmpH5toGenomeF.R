@@ -1,4 +1,4 @@
-loadCmpH5toGenomeF <- function(cmpH5.file, out.dir, n.chunk=10, normalization.method='bySubread', is.use.CCS=FALSE, is.return=FALSE, mapQV.cutoff=255)
+loadCmpH5toGenomeF <- function(cmpH5.file, out.dir, n.chunk=10, normalization.method='bySubread', is.use.CCS=TRUE, is.return=FALSE, mapQV.cutoff=255)
 {
 	mapQV.cutoff <- mapQV.cutoff - 1
 

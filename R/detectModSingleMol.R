@@ -103,6 +103,8 @@ getZscoreSingleMolecule.CC <- function(genomeF.native, genomeF.ctrl, is.merge=FA
                          mol.id.native, mol.id.ctrl, as.integer(start.native), as.integer(start.ctrl), as.integer(is.z),
 			as.integer(is.delta))
         }
+	z.score$genome.start.pos <- genomeF.native$genome.start.pos
+	z.score$genome.start.neg <- genomeF.native$genome.start.neg
 	if (is.merge==TRUE)
 		return(mergeZscoreSingleMolecule(z.score))
 	else  

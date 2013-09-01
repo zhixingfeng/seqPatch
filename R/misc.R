@@ -1,7 +1,41 @@
-hist.h <- function(x)
+write.z.score.to.CSV <- function(z.score, dir, prefix='csv_z_score')
 {
+	if (any(names(z.score$pos)!=names(z.score$genome.start.pos)) |
+		any(names(z.score$neg)!=names(z.score$genome.start.neg)))
+		stop('incorrect reference genome names.')	
+	if (!file.exists(dir)) 
+		dir.create(dir, recursive=TRUE)	
+	
+	# postive strand 
+	for (i in 1:length(z.score$pos)){
+		cur.ref <- names(z.score$pos[i])
+		z <- z.score$pos[[i]]
+		ref.pos <- z.score$genome.start.pos[[cur.ref]] - 1 + 1:length(z)
+		if (substr(dir, nchar(dir), nchar(dir))=='/'){
+                        file.name <- paste(dir, prefix,'_',cur.ref,'_pos.csv',sep='')
+                }else{
+                        file.name <- paste(dir,'/',prefix,'_',cur.ref,'_pos.csv',sep='')
+                }
+		cat('convert forward strand: ', cur.ref, '\n',sep='')
+		.Call('R_API_write_z_score_to_CSV', z, ref.pos, file.name)
+	}
+
+	# negative strand 
+	for (i in 1:length(z.score$neg)){
+                cur.ref <- names(z.score$neg[i])
+                z <- z.score$neg[[i]]
+                ref.neg <- z.score$genome.start.neg[[cur.ref]] - 1 + 1:length(z)
+                if (substr(dir, nchar(dir), nchar(dir))=='/'){
+                        file.name <- paste(dir, prefix,'_',cur.ref,'_neg.csv',sep='')
+                }else{
+                        file.name <- paste(dir,'/',prefix,'_',cur.ref,'_neg.csv',sep='')
+                }
+                cat('convert backward strand: ', cur.ref, '\n',sep='')
+                .Call('R_API_write_z_score_to_CSV', z, ref.neg, file.name)
+        }
 
 }
+
 write.genomeFtoCSV <- function(genomeF, dir, prefix='csv_data')
 {
 	if (any(names(genomeF$features$ipd_pos)!=names(genomeF$genome.start.pos)) | 

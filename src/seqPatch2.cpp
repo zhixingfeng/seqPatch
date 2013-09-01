@@ -73,7 +73,7 @@ double getTstat_var_equal(double * x, int n_x, double * y, int n_y)
 	return t;
 }
 */
-double getTstat_var_equal_ref (double x_avg, double x_var, int n_x, double y_avg, double y_var, int n_y)
+double getTstat_var_equal_ref (double x_avg, double x_var, double n_x, double y_avg, double y_var, double n_y)
 {
 	double t = sqrt(-1);
         if (n_x + n_y <= 2) return t;
@@ -703,6 +703,26 @@ RcppExport SEXP R_API_writeGenomeFtoCSV(SEXP R_IPD, SEXP R_mol_ID, SEXP R_ref_po
 	return R_NilValue;
 
 }
+
+RcppExport SEXP R_API_write_z_score_to_CSV(SEXP R_z, SEXP R_ref_pos, SEXP R_file_name)
+{
+	string file_name = CHAR(STRING_ELT(R_file_name,0));
+	double * ref_pos = REAL(R_ref_pos);
+	int genome_size = Rf_length(R_ref_pos);
+	
+	FILE *outfile = fopen(file_name.c_str(), "w");
+        for (int i=0;i<genome_size;i++){
+                double * z_score = REAL(VECTOR_ELT(R_z,i));
+                int cvg = Rf_length(VECTOR_ELT(R_z,i));
+                for (int j=0;j<cvg;j++) fprintf(outfile, "%.0lf\t%lf\n", ref_pos[i], z_score[j]);
+                if ((i+1)%10000==0) Rprintf("converted %d positions.\r", i+1);
+        }
+        Rprintf("converted %d positions.\n", genome_size);
+        fclose(outfile);
+		
+	return R_NilValue;
+}
+
 
 
 
