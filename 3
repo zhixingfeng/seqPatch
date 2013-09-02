@@ -129,25 +129,14 @@ RcppExport SEXP R_API_detectModProp_EB(SEXP R_z_score, SEXP R_mu_0, SEXP R_sigma
         vector<double> f1_y(REAL(R_f1_y), REAL(R_f1_y) + Rf_length(R_f1_y));
         int max_iter = INTEGER(R_max_iter)[0];
 	
-	map<string, vector<double> > rl;
+	map<string, vector<double> >
 	int genome_size = Rf_length(R_z_score);
 	for (int i=0;i<genome_size;i++){
-		if ((i+1)%1000==0) Rprintf("%d\r", i+1); 
 		SEXP cur_R_z_score = VECTOR_ELT(R_z_score, i);
 		vector<double> z_score(REAL(cur_R_z_score), REAL(cur_R_z_score) + Rf_length(cur_R_z_score));
-		
-		EBmixture EBmixtureObj;
-        	EBmixtureObj.setParameters(mu_0 , sigma_0, f1_x, f1_y);
-        	EBmixtureObj.setData(z_score);
-        	EBmixtureObj.setMaxIter(max_iter);
-        	EBmixtureObj.run();
-	
-		rl["N_0"].push_back(EBmixtureObj.get_N_0());
-		rl["N_1"].push_back(EBmixtureObj.get_N_1());
-		rl["prop"].push_back(EBmixtureObj.get_prop());
+			
 	}	
-	Rprintf("%d\n", genome_size);
-	return Rcpp::wrap(rl);
+	return R_NilValue;
 }
 
 
@@ -161,7 +150,7 @@ RcppExport SEXP R_API_EBmixture(SEXP R_z_score, SEXP R_mu_0, SEXP R_sigma_0, SEX
 	int max_iter = INTEGER(R_max_iter)[0];	
 
 	EBmixture EBmixtureObj;
-	EBmixtureObj.setParameters(mu_0 , sigma_0, f1_x, f1_y);
+	EBmixtureObj.setParameters(0 , 1, f1_x, f1_y);
 	EBmixtureObj.setData(z_score);
 	EBmixtureObj.setMaxIter(max_iter);
 	EBmixtureObj.run();

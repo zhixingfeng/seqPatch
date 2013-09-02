@@ -70,7 +70,12 @@ bool EBmixture::run()
 		double f0_log_z	= f0_log(z[i]);
 		double f1_log_z = f1_log(z[i]);
 		double cur_gamma_0 = 1 / (1 + exp(f1_log_z - f0_log_z) );
+		if (z[i]<=-6)
+			cur_gamma_0 = 1;
+		if (z[i]>=6)
+			cur_gamma_0 = 0;
 		double cur_gamma_1 = 1 - cur_gamma_0;
+			
 		gamma_0.push_back(cur_gamma_0);
 		gamma_1.push_back(cur_gamma_1);
 		N_0[0] += cur_gamma_0;
@@ -89,7 +94,11 @@ bool EBmixture::run()
 			double f0_log_z = f0_log(z[i]);
                 	double f1_log_z = f1_log(z[i]);
 			gamma_0[i] = 1 / (1 + exp(f1_log_z + digamma(N_1[iter] + 1) - f0_log_z - digamma(N_0[iter] + 1)) );
-	                gamma_1[i] = 1 - gamma_0[i];
+	                if (z[i] <= -6)
+				gamma_0[i] = 0;
+			if (z[i] >= 6)
+				gamma_0[i] = 1;
+			gamma_1[i] = 1 - gamma_0[i];
 		}			
 		
 		iter++;
