@@ -95,9 +95,9 @@ bool EBmixture::run()
                 	double f1_log_z = f1_log(z[i]);
 			gamma_0[i] = 1 / (1 + exp(f1_log_z + digamma(N_1[iter] + 1) - f0_log_z - digamma(N_0[iter] + 1)) );
 	                if (z[i] <= -6)
-				gamma_0[i] = 0;
-			if (z[i] >= 6)
 				gamma_0[i] = 1;
+			if (z[i] >= 6)
+				gamma_0[i] = 0;
 			gamma_1[i] = 1 - gamma_0[i];
 		}			
 		
