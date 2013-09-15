@@ -93,7 +93,8 @@ estimate.f1 <- function(genomeF.native, genomeF.wga, nulltype = 1, locfdr.df = 1
 	rl <- list()
 	rl$x <- f1.hist$mids
 	rl$y <- f1$fitted.values
-	rl	
+	rl$breaks <- f1.hist$breaks	
+	rl
 }
 
 
