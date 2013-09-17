@@ -120,8 +120,40 @@ vector<int> bin_search(double query, double *temp, int temp_len)
 
 
 /*-----------------------R API-----------------------*/
+RcppExport SEXP R_API_detectModProp_EB(SEXP R_z_score, SEXP R_mu_0, SEXP R_sigma_0, SEXP R_f1_x, SEXP R_f1_y)
+{
+	map<string, vector<double> > rl;
+	return Rcpp::wrap(rl);
+}
 
-RcppExport SEXP R_API_detectModProp_EB(SEXP R_z_score, SEXP R_mu_0, SEXP R_sigma_0, SEXP R_f1_x, SEXP R_f1_y, SEXP R_max_iter)
+RcppExport SEXP R_API_EBmixture(SEXP R_IPD, SEXP R_idx, SEXP R_mu_0, SEXP R_sigma_0, SEXP R_f1_x, SEXP R_f1_y)
+{
+	double * IPD = REAL(R_IPD);
+	int len_IPD = Rf_length(R_IPD);
+	double * idx = REAL(R_idx);
+	int len_idx = Rf_length(R_idx);
+	
+	double mu_0 = REAL(R_mu_0)[0];
+        double sigma_0 = REAL(R_sigma_0)[0];
+        vector<double> f1_x(REAL(R_f1_x), REAL(R_f1_x) + Rf_length(R_f1_x));
+        vector<double> f1_y(REAL(R_f1_y), REAL(R_f1_y) + Rf_length(R_f1_y));
+
+	EBmixture EBmixtureObj;
+	EBmixtureObj.setParameters(mu_0, sigma_0, f1_x, f1_y);
+	EBmixtureObj.getMoleculeMeanIPD(IPD, idx, len_IPD, len_idx);	
+	EBmixtureObj.run();
+
+	/*return Rcpp::List::create(Rcpp::Named("ipd_avg")=Rcpp::wrap(EBmixtureObj.get_ipd_avg()),
+				Rcpp::Named("ipd_n")=Rcpp::wrap(EBmixtureObj.get_ipd_n()),
+				Rcpp::Named("ipd_var")=Rcpp::wrap(EBmixtureObj.get_ipd_var()),
+				Rcpp::Named("n_mol")=Rcpp::wrap(EBmixtureObj.get_n_mol()),
+                                Rcpp::Named("n_subreads")=Rcpp::wrap(EBmixtureObj.get_n_subreads()),
+                                Rcpp::Named("prop")=Rcpp::wrap(EBmixtureObj.get_prop()));
+*/
+        return R_NilValue;
+}
+
+RcppExport SEXP R_API_detectModProp_EB_pooling(SEXP R_z_score, SEXP R_mu_0, SEXP R_sigma_0, SEXP R_f1_x, SEXP R_f1_y, SEXP R_max_iter)
 {
 	double mu_0 = REAL(R_mu_0)[0];
         double sigma_0 = REAL(R_sigma_0)[0];
@@ -136,7 +168,7 @@ RcppExport SEXP R_API_detectModProp_EB(SEXP R_z_score, SEXP R_mu_0, SEXP R_sigma
 		SEXP cur_R_z_score = VECTOR_ELT(R_z_score, i);
 		vector<double> z_score(REAL(cur_R_z_score), REAL(cur_R_z_score) + Rf_length(cur_R_z_score));
 		
-		EBmixture EBmixtureObj;
+		EBmixture_pooling EBmixtureObj;
         	EBmixtureObj.setParameters(mu_0 , sigma_0, f1_x, f1_y);
         	EBmixtureObj.setData(z_score);
         	EBmixtureObj.setMaxIter(max_iter);
@@ -150,8 +182,7 @@ RcppExport SEXP R_API_detectModProp_EB(SEXP R_z_score, SEXP R_mu_0, SEXP R_sigma
 	return Rcpp::wrap(rl);
 }
 
-
-RcppExport SEXP R_API_EBmixture(SEXP R_z_score, SEXP R_mu_0, SEXP R_sigma_0, SEXP R_f1_x, SEXP R_f1_y, SEXP R_max_iter)
+RcppExport SEXP R_API_EBmixture_pooling(SEXP R_z_score, SEXP R_mu_0, SEXP R_sigma_0, SEXP R_f1_x, SEXP R_f1_y, SEXP R_max_iter)
 {
 	vector<double> z_score(REAL(R_z_score), REAL(R_z_score) + Rf_length(R_z_score));
 	double mu_0 = REAL(R_mu_0)[0];
@@ -160,7 +191,7 @@ RcppExport SEXP R_API_EBmixture(SEXP R_z_score, SEXP R_mu_0, SEXP R_sigma_0, SEX
         vector<double> f1_y(REAL(R_f1_y), REAL(R_f1_y) + Rf_length(R_f1_y));	
 	int max_iter = INTEGER(R_max_iter)[0];	
 
-	EBmixture EBmixtureObj;
+	EBmixture_pooling EBmixtureObj;
 	EBmixtureObj.setParameters(mu_0 , sigma_0, f1_x, f1_y);
 	EBmixtureObj.setData(z_score);
 	EBmixtureObj.setMaxIter(max_iter);
@@ -183,7 +214,7 @@ RcppExport SEXP R_API_bin_search(SEXP R_query, SEXP R_temp, SEXP R_temp_len)
 	double *temp = REAL(R_temp);
 	int temp_len = INTEGER(R_temp_len)[0];			
 	//vector<int> rl = bin_search(query, temp, temp_len);
-	EBmixture EBmixtureObj;
+	EBmixture_pooling EBmixtureObj;
 	vector<int> rl = EBmixtureObj.bin_search(query, temp, temp_len);
 	Rprintf("<%d,%d>\n",rl[0],rl[1]);
 	//return Rcpp::wrap(rl);

@@ -1,4 +1,53 @@
 #include "EBmixture.h"
+bool EBmixture::getMoleculeMeanIPD(double *ipd, double *idx, int len_ipd, int len_idx)
+{
+	if (len_ipd != len_idx){ printf("length of R_IPD and R_idx should be the same.\n"); return false;}
+	// get average IPD of each molecule 
+	int len = len_ipd;
+        pair<map<int,double>::iterator,bool> ret;
+        map<int, double> ipd_sum_map;
+        map<int, double> ipd_n_map;
+	map<int, double> ipd_var_map;        
+	for (int i=0;i<len;i++){
+                ret = ipd_sum_map.insert(pair<int, double>(int(idx[i]),ipd[i]));
+                if (ret.second==true){
+                        ipd_n_map.insert(pair<int, double>(int(idx[i]),1));
+			ipd_var_map.insert(pair<int, double>(int(idx[i]),ipd[i]*ipd[i]));
+                }else{
+                        ret.first->second += ipd[i];
+                        ipd_n_map[int(idx[i])] += 1;
+			ipd_var_map[int(idx[i])] += ipd[i]*ipd[i];
+                }
+        }
+
+        ipd_avg.clear();
+        ipd_n.clear();
+	ipd_var.clear();
+        map<int, double>::iterator it_avg = ipd_sum_map.begin();
+        map<int, double>::iterator it_n = ipd_n_map.begin();
+        map<int, double>::iterator it_var = ipd_var_map.begin();
+
+        while(it_avg!=ipd_sum_map.end()){
+                double cur_n = it_n->second;
+		double cur_avg = it_avg->second / cur_n;
+		ipd_avg.push_back(cur_avg);
+                ipd_n.push_back(cur_n);
+                ipd_var.push_back(it_var->second / cur_n - cur_avg*cur_avg);
+		it_avg++;
+                it_n++;
+        	it_var++;
+	}
+
+	if ( !(ipd_avg.size()==ipd_n.size()&&ipd_n.size()==ipd_var.size()) ){
+		printf("run error: size of ipd_avg, ipd_n and ipd_var should be the same.\n"); 
+		return false;
+	}
+
+        n_mol = (int) ipd_avg.size();
+	n_subreads.clear();
+	n_subreads = ipd_n;
+	return true;
+}
 
 vector<int> EBmixture::bin_search(double query, double *temp, int temp_len)
 {
@@ -39,7 +88,6 @@ double EBmixture::f0_log(double x)
 	return -(x - mu_0)*(x - mu_0) / (2*sigma_0*sigma_0) - log(2*my_pi)/2 - log(sigma_0);
 }
 
-
 double EBmixture::f1(double x)
 {
 	int len = f1_x.size();
@@ -62,54 +110,8 @@ double EBmixture::f1_log(double x)
 
 bool EBmixture::run()
 {
-	clear();	
-	// Initialize gamma_0 (simply f0 / (f1 + f0) ), gamma_1, rho_0, rho_1, N_0, N_1, and prop
-	N_0.push_back(0);
-	N_1.push_back(0);	
-	for (int i = 0; i < (int)z.size(); i++){
-		double f0_log_z	= f0_log(z[i]);
-		double f1_log_z = f1_log(z[i]);
-		double cur_gamma_0 = 1 / (1 + exp(f1_log_z - f0_log_z) );
-		if (z[i]<=-6)
-			cur_gamma_0 = 1;
-		if (z[i]>=6)
-			cur_gamma_0 = 0;
-		double cur_gamma_1 = 1 - cur_gamma_0;
-			
-		gamma_0.push_back(cur_gamma_0);
-		gamma_1.push_back(cur_gamma_1);
-		N_0[0] += cur_gamma_0;
-		N_1[0] += cur_gamma_1;	
+	clear();
 		
-		rho_0.push_back(1);
-		rho_1.push_back(1);
-	}	
-	prop.push_back(N_1[0] / (N_0[0] + N_1[0]));	
-	
-	// interate
-	double eps = 1e-4;	
-	iter = 0;
-	while (iter < max_iter){
-		for (int i = 0;i < (int)z.size(); i++){
-			double f0_log_z = f0_log(z[i]);
-                	double f1_log_z = f1_log(z[i]);
-			gamma_0[i] = 1 / (1 + exp(f1_log_z + digamma(N_1[iter] + 1) - f0_log_z - digamma(N_0[iter] + 1)) );
-	                if (z[i] <= -6)
-				gamma_0[i] = 1;
-			if (z[i] >= 6)
-				gamma_0[i] = 0;
-			gamma_1[i] = 1 - gamma_0[i];
-		}			
-		
-		iter++;
-		
-		double cur_N_0 = sum(gamma_0);
-		double cur_N_1 = sum(gamma_1);
-		N_0.push_back(cur_N_0);
-		N_1.push_back(cur_N_1);
-		prop.push_back(cur_N_1 / (cur_N_0 + cur_N_1) );
-		if (fabs(prop[iter] - prop[iter-1]) <= eps) break;
-	}	
 	return true;
 }
 

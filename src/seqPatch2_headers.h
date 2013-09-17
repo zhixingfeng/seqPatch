@@ -10,6 +10,7 @@
 #include <stdio.h>
 #include "SpecialFuns.h"
 #include "BayesianMixtureModel.h"
+#include "EBmixture_pooling.h"
 #include "EBmixture.h"
 
 map<string, vector<double> > hieModelEB(vector<double> & ipd_ref_mean, vector<double> & ipd_ref_var,

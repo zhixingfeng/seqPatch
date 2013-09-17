@@ -1,4 +1,15 @@
-detectModPropEB <- function(z.score, mu.0 = 0, sigma.0 = 1, f1.x, f1.y, max.iter = 100)
+EB.mixture.model <- function(IPD, idx, mu.0 = 0, sigma.0 = 1, f1.x, f1.y)
+{
+	s <- diff(f1.x)[1]
+	f1.int <- sum(f1.y*s)
+	if (abs(f1.int - 1)>=1e-6) stop('f1 is not a valid density function')
+
+	.Call('R_API_EBmixture', as.numeric(IPD), as.numeric(idx), as.numeric(mu.0), as.numeric(sigma.0),
+		 as.numeric(f1.x), as.numeric(f1.y) )
+}
+
+
+detectModPropEB.pooling <- function(z.score, mu.0 = 0, sigma.0 = 1, f1.x, f1.y, max.iter = 100)
 {
 	rl <- list()
 	rl$pos <- list()
@@ -8,7 +19,7 @@ detectModPropEB <- function(z.score, mu.0 = 0, sigma.0 = 1, f1.x, f1.y, max.iter
 	for (i in 1:length(z.score$pos)){
 		cur.ref <- names(z.score$pos[i])
 		cat(cur.ref,':\n', sep='')
-		rl$pos[[cur.ref]] <- .Call('R_API_detectModProp_EB', z.score$pos[[i]], as.numeric(mu.0), as.numeric(sigma.0),
+		rl$pos[[cur.ref]] <- .Call('R_API_detectModProp_EB_pooling', z.score$pos[[i]], as.numeric(mu.0), as.numeric(sigma.0),
 			                as.numeric(f1.x), as.numeric(f1.y), as.integer(max.iter))
 
 	}
@@ -18,7 +29,7 @@ detectModPropEB <- function(z.score, mu.0 = 0, sigma.0 = 1, f1.x, f1.y, max.iter
 	for (i in 1:length(z.score$neg)){
                 cur.ref <- names(z.score$neg[i])
 		cat(cur.ref,':\n', sep='')
-                rl$neg[[cur.ref]] <- .Call('R_API_detectModProp_EB', z.score$neg[[i]], as.numeric(mu.0), as.numeric(sigma.0),
+                rl$neg[[cur.ref]] <- .Call('R_API_detectModProp_EB_pooling', z.score$neg[[i]], as.numeric(mu.0), as.numeric(sigma.0),
                                         as.numeric(f1.x), as.numeric(f1.y), as.integer(max.iter))
 
         }
@@ -29,12 +40,13 @@ detectModPropEB <- function(z.score, mu.0 = 0, sigma.0 = 1, f1.x, f1.y, max.iter
 
 }
 
-EB.mixture.model <- function(z.score, mu.0 = 0, sigma.0 = 1, f1.x, f1.y, max.iter = 100)
+EB.mixture.model.pooling <- function(z.score, mu.0 = 0, sigma.0 = 1, f1.x, f1.y, max.iter = 100)
 {
-	.Call('R_API_EBmixture', as.numeric(z.score), as.numeric(mu.0), as.numeric(sigma.0),
+	.Call('R_API_EBmixture_pooling', as.numeric(z.score), as.numeric(mu.0), as.numeric(sigma.0),
 		as.numeric(f1.x), as.numeric(f1.y), as.integer(max.iter))
-
 }
+
+
 
 estimate.f1 <- function(genomeF.native, genomeF.wga, nulltype = 1, locfdr.df = 14, locfdr.pct0 = 1/4, locfdr.bre = 120, 
 			f1.df = 14, f1.bre = 120, out.dir = NULL)
