@@ -44,8 +44,6 @@ bool EBmixture::getMoleculeMeanIPD(double *ipd, double *idx, int len_ipd, int le
 	}
 
         n_mol = (int) ipd_avg.size();
-	n_subreads.clear();
-	n_subreads = ipd_n;
 	return true;
 }
 
@@ -79,13 +77,30 @@ vector<int> EBmixture::bin_search(double query, double *temp, int temp_len)
 	}
 	return idx_pair;
 }
-double EBmixture::f0(double x)
+double EBmixture::f1_log_int(double x_avg, double x_var, double x_n)
 {
-	return exp(-(x - mu_0)*(x - mu_0) / (2*sigma_0*sigma_0)) / (sqrt(2*my_pi)*sigma_0);	
+	int len = f_mu_1.size();
+	double rl = 0;
+	for (int i=0; i<len; i++){
+		double mu_1 = f1_x[i];
+		rl += f_mu_1[i] * (x_avg - mu_1)*(x_avg - mu_1);
+	}
+	rl *= s;
+	rl = - (rl + x_var) * x_n / (2.0*sigma_1*sigma_1) - x_n*log(sigma_1) - x_n*log(2.0*my_pi)/2.0;	
+			
+	return rl;
 }
-double EBmixture::f0_log(double x)
+
+double EBmixture::f0(double x_avg, double x_var, double x_n)
 {
-	return -(x - mu_0)*(x - mu_0) / (2*sigma_0*sigma_0) - log(2*my_pi)/2 - log(sigma_0);
+	//return exp(-(x - mu_0)*(x - mu_0) / (2*sigma_0*sigma_0)) / (sqrt(2*my_pi)*sigma_0);	
+	return exp( -( x_n* ( (x_avg - mu_0)*(x_avg - mu_0) + x_var) ) / (2.0*sigma_0*sigma_0) ) / pow(sqrt(2.0*my_pi)*sigma_0, x_n);	
+
+}
+double EBmixture::f0_log(double x_avg, double x_var, double x_n)
+{
+	return -( x_n* ( (x_avg - mu_0)*(x_avg - mu_0) + x_var) ) / (2.0*sigma_0*sigma_0) - x_n*log(2.0*my_pi) / 2.0 - x_n*log(sigma_0);
+	//return -(x - mu_0)*(x - mu_0) / (2*sigma_0*sigma_0) - log(2*my_pi)/2 - log(sigma_0);
 }
 
 double EBmixture::f1(double x)
@@ -111,7 +126,46 @@ double EBmixture::f1_log(double x)
 bool EBmixture::run()
 {
 	clear();
+	// Initialize
+	f_mu_1 = f1_y;		
+	N_0.push_back(n_mol / 2.0);
+	N_1.push_back(n_mol / 2.0);	
+	for (int i=0; i<n_mol; i++){
+		gamma_0.push_back(-1);
+		gamma_1.push_back(-1);
+	}
+	prop.push_back(-1);
+	// iterate
+	double eps = 1e-4;	
+	iter = 1;
+	while (iter <= max_iter){
+		// update delta
+		for (int i = 0;i < n_mol; i++){
+			double f0_log_z = f0_log(ipd_avg[i], ipd_var[i], ipd_n[i]);
+                	double f1_log_z = f1_log_int(ipd_avg[i], ipd_var[i], ipd_n[i]);
+			double gamma_0_core = f1_log_z + digamma(N_1[iter-1] + 1) - f0_log_z - digamma(N_0[iter-1] + 1);
+			gamma_0[i] = 1 / (1 + exp(gamma_0_core)) ;
+	                if (gamma_0_core <= -12)
+				gamma_0[i] = 1;
+			if (gamma_0_core >= 12)
+				gamma_0[i] = 0;
+			gamma_1[i] = 1 - gamma_0[i];
+		}			
+
+		// update N_0 and N_1
+		double cur_N_0 = sum(gamma_0);
+		double cur_N_1 = sum(gamma_1);
+		N_0.push_back(cur_N_0);
+		N_1.push_back(cur_N_1);
+		prop.push_back(cur_N_1 / (cur_N_0 + cur_N_1) );
 		
+		if (fabs(prop[iter] - prop[iter-1]) <= eps) break;
+	
+		// update f_mu_1;
+		 	
+		iter ++;
+	}	
+
 	return true;
 }
 

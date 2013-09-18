@@ -1,11 +1,11 @@
-EB.mixture.model <- function(IPD, idx, mu.0 = 0, sigma.0 = 1, f1.x, f1.y)
+EB.mixture.model <- function(IPD, idx, mu.0 = 0, sigma.0 = 1, f1.x, f1.y, max.iter = 100)
 {
 	s <- diff(f1.x)[1]
 	f1.int <- sum(f1.y*s)
 	if (abs(f1.int - 1)>=1e-6) stop('f1 is not a valid density function')
 
 	.Call('R_API_EBmixture', as.numeric(IPD), as.numeric(idx), as.numeric(mu.0), as.numeric(sigma.0),
-		 as.numeric(f1.x), as.numeric(f1.y) )
+		 as.numeric(f1.x), as.numeric(f1.y),  as.integer(max.iter))
 }
 
 
