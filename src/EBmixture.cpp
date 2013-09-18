@@ -159,10 +159,31 @@ bool EBmixture::run()
 		N_1.push_back(cur_N_1);
 		prop.push_back(cur_N_1 / (cur_N_0 + cur_N_1) );
 		
-		if (fabs(prop[iter] - prop[iter-1]) <= eps) break;
 	
 		// update f_mu_1;
-		 	
+		int s_len = f_mu_1.size(); 
+		for (int i=0; i < s_len; i++){
+			double cur_f_mu_1 = 0;
+			double cur_mu_1 = f1_x[i];
+			for (int j=0; j<n_mol; j++){
+				cur_f_mu_1 += gamma_1[j]*ipd_n[j]*(ipd_avg[j] - cur_mu_1)*(ipd_avg[j] - cur_mu_1);
+			}			
+			
+			cur_f_mu_1 = exp(- cur_f_mu_1/(2*sigma_1*sigma_1) + log(f1_y[i]) );
+			if (f1_y[i]<=1e-12) cur_f_mu_1 = 1e-12;
+			f_mu_1[i] = cur_f_mu_1;
+		}
+		double f_mu_1_C = 0;
+		for (int i=0; i<s_len; i++){
+			f_mu_1_C += f_mu_1[i];
+		}		
+		f_mu_1_C *= s;
+	
+		for (int i=0; i<s_len; i++){
+                        f_mu_1[i] += f_mu_1[i] / f_mu_1_C;
+                }
+
+		if (fabs(prop[iter] - prop[iter-1]) <= eps) break;
 		iter ++;
 	}	
 
