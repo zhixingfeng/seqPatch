@@ -161,7 +161,7 @@ bool EBmixture::run()
 		
 	
 		// update f_mu_1;
-		int s_len = f_mu_1.size(); 
+		/*int s_len = f_mu_1.size(); 
 		for (int i=0; i < s_len; i++){
 			double cur_f_mu_1 = 0;
 			double cur_mu_1 = f1_x[i];
@@ -180,8 +180,8 @@ bool EBmixture::run()
 		f_mu_1_C *= s;
 	
 		for (int i=0; i<s_len; i++){
-                        f_mu_1[i] += f_mu_1[i] / f_mu_1_C;
-                }
+                        f_mu_1[i] = f_mu_1[i] / f_mu_1_C;
+                }*/
 
 		if (fabs(prop[iter] - prop[iter-1]) <= eps) break;
 		iter ++;
