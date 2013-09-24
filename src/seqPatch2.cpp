@@ -101,9 +101,61 @@ vector<int> bin_search(double query, double *temp, int temp_len)
 
 
 /*-----------------------R API-----------------------*/
-RcppExport SEXP R_API_detectModProp_EB(SEXP R_z_score, SEXP R_mu_0, SEXP R_sigma_0, SEXP R_f1_x, SEXP R_f1_y)
+RcppExport SEXP R_API_detectModProp_EB(SEXP R_IPD_native, SEXP R_idx_native, SEXP R_IPD_wga, SEXP R_start_native, 
+			SEXP R_start_wga, SEXP R_f1_x, SEXP R_f1_y, SEXP R_max_iter)
 {
+	int start_native = INTEGER(R_start_native)[0];
+	int start_wga = INTEGER(R_start_wga)[0];
+	int shift = start_native - start_wga;
+	vector<double> f1_x(REAL(R_f1_x), REAL(R_f1_x) + Rf_length(R_f1_x));
+        vector<double> f1_y(REAL(R_f1_y), REAL(R_f1_y) + Rf_length(R_f1_y));
+	int max_iter = INTEGER(R_max_iter)[0];
+	
+	int len = Rf_length(R_IPD_native);
+	int len_wga = Rf_length(R_IPD_wga);
+
 	map<string, vector<double> > rl;
+        vector<double> prop(len, sqrt(-1));
+        vector<double> n_mol(len, sqrt(-1));
+
+	for (int i=0; i<len; i++){
+		if ((i+1)%10000==0) Rprintf("processed %d sites\r",i+1);
+		double * IPD_native = REAL(VECTOR_ELT(R_IPD_native,i));
+		int n_IPD_native = Rf_length(VECTOR_ELT(R_IPD_native,i));			
+		double * idx_native = REAL(VECTOR_ELT(R_idx_native,i));
+		int n_idx_native = Rf_length(VECTOR_ELT(R_idx_native,i));
+
+		int i_wga = i + shift;
+		if (i_wga<0 || i_wga>=len_wga)
+			continue;
+		
+		double * ipd_wga = REAL(VECTOR_ELT(R_IPD_wga, i_wga));
+                int n_ipd_wga = Rf_length(VECTOR_ELT(R_IPD_wga,i_wga));
+
+		double mu_0;
+		double sigma_0;
+		if (n_ipd_wga < 2){
+			mu_0 = sqrt(-1);
+			sigma_0 = sqrt(-1);	
+		}else{
+			mu_0 = mean_c(ipd_wga, n_ipd_wga);
+			sigma_0 = sqrt((n_ipd_wga - 1)*var_c(ipd_wga, n_ipd_wga)/n_ipd_wga);
+		}
+		
+		EBmixture EBmixtureObj;
+        	EBmixtureObj.setParameters(mu_0, sigma_0, f1_x, f1_y, max_iter);
+        	EBmixtureObj.getMoleculeMeanIPD(IPD_native, idx_native, n_IPD_native, n_idx_native);
+        	EBmixtureObj.run();	
+
+		prop[i] = EBmixtureObj.get_prop();	
+		n_mol[i] = EBmixtureObj.get_n_mol();
+	}	
+	Rprintf("processed %d sites\n", len);
+
+	rl["prop"] = prop;
+	rl["n_mol"] = n_mol;	
+
+
 	return Rcpp::wrap(rl);
 }
 

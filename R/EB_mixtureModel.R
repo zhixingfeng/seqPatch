@@ -1,3 +1,47 @@
+detectModPropEB <- function(genomeF.native, genomeF.wga, f1.x, f1.y, max.iter = 100)
+{
+	if (is.null(genomeF.native$features$moleculeID_pos) | is.null(genomeF.native$features$moleculeID_neg))
+		stop('can not find molecule ID in genomeF.native')
+	
+	rl <- list()
+	rl$pos <- list()
+	rl$neg <- list()
+	
+	# forward strand
+	cat('detect forward strand.\n')
+	for (i in 1:length(genomeF.native$features$ipd_pos)){
+		cur.ref <- names(genomeF.native$features$ipd_pos[i])
+		if (is.null(genomeF.wga$features$ipd_pos[[cur.ref]]))	
+			stop('can not find \'',cur.ref, '\' in genomeF.wga')
+		ipd.wga <- genomeF.wga$features$ipd_pos[[cur.ref]]
+		rl$pos[[cur.ref]] <- .Call('R_API_detectModProp_EB',genomeF.native$features$ipd_pos[[i]],
+					genomeF.native$features$moleculeID_pos[[i]], ipd.wga, 
+					as.integer(genomeF.native$genome.start.pos[[i]]),
+					as.integer(genomeF.wga$genome.start.pos[[cur.ref]]),
+					as.numeric(f1.x), as.numeric(f1.y), as.integer(max.iter))	
+			
+	}
+
+	# backward strand 
+	cat('detect backward strand.\n')
+	for (i in 1:length(genomeF.native$features$ipd_neg)){
+                cur.ref <- names(genomeF.native$features$ipd_neg[i])
+                if (is.null(genomeF.wga$features$ipd_neg[[cur.ref]]))
+                        stop('can not find \'',cur.ref, '\' in genomeF.wga')
+                ipd.wga <- genomeF.wga$features$ipd_neg[[cur.ref]]
+                rl$neg[[cur.ref]] <- .Call('R_API_detectModProp_EB',genomeF.native$features$ipd_neg[[i]],
+                                        genomeF.native$features$moleculeID_neg[[i]], ipd.wga,
+                                        as.integer(genomeF.native$genome.start.neg[[i]]),
+                                        as.integer(genomeF.wga$genome.start.neg[[cur.ref]]),
+                                        as.numeric(f1.x), as.numeric(f1.y), as.integer(max.iter))
+
+        }	
+
+	rl
+}
+
+
+
 EB.mixture.model <- function(IPD, idx, mu.0 = 0, sigma.0 = 1, f1.x, f1.y, max.iter = 100)
 {
 	s <- diff(f1.x)[1]

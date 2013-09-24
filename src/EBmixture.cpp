@@ -135,6 +135,11 @@ bool EBmixture::run()
 		gamma_1.push_back(-1);
 	}
 	prop.push_back(-1);
+
+	// integrate out mu1
+	vector<double> f1_log_z_all(n_mol, sqrt(-1));	
+	for (int i=0; i<n_mol; i++)
+		f1_log_z_all[i] = f1_log_int(ipd_avg[i], ipd_var[i], ipd_n[i]);
 	// iterate
 	double eps = 1e-4;	
 	iter = 1;
@@ -142,7 +147,8 @@ bool EBmixture::run()
 		// update delta
 		for (int i = 0;i < n_mol; i++){
 			double f0_log_z = f0_log(ipd_avg[i], ipd_var[i], ipd_n[i]);
-                	double f1_log_z = f1_log_int(ipd_avg[i], ipd_var[i], ipd_n[i]);
+                	//double f1_log_z = f1_log_int(ipd_avg[i], ipd_var[i], ipd_n[i]);
+                	double f1_log_z = f1_log_z_all[i];
 			double gamma_0_core = f1_log_z + digamma(N_1[iter-1] + 1) - f0_log_z - digamma(N_0[iter-1] + 1);
 			gamma_0[i] = 1 / (1 + exp(gamma_0_core)) ;
 	                if (gamma_0_core <= -12)
