@@ -1,7 +1,120 @@
+collapse.rl <- function(rl, item = 'prop')
+{
+	rl.list <- list()
+	k <- 1
+	for (i in 1:length(rl$pos)) {
+		if (is.null(rl$pos[[i]][[item]])) stop('unable to find ', item)
+		rl.list[[k]] <- rl$pos[[i]][[item]]
+		k <- k + 1
+	}
+	for (i in 1:length(rl$neg)) {
+		if (is.null(rl$neg[[i]][[item]])) stop('unable to find ', item)
+                rl.list[[k]] <- rl$neg[[i]][[item]]
+                k <- k + 1
+        }
+	unlist(rl.list)
+}
+
+saturation.analysis <- function(genomeF.native, genomeF.wga, rate=seq(0.1,1,0.1), out.dir=NULL, max.iter=100)
+{
+	f1.B <- list()
+	rl.B <- list()
+	for (i in 1:length(rate)){
+		genomeF.sub <- sample_subreads(genomeF.native, rate[i])	
+		if (!is.null(out.dir)){
+			cur.out.dir <- paste(out.dir,'/rate_', rate[i], sep='')
+			f1.B[[i]] <- estimate.f1(genomeF.sub, genomeF.wga, out.dir = cur.out.dir)
+		}else{
+			f1.B[[i]] <- estimate.f1(genomeF.sub, genomeF.wga, out.dir = NULL)
+		}
+		rl.B[[i]] <- detectModPropEB(genomeF.sub, genomeF.wga, f1.B[[i]]$x, f1.B[[i]]$y, max.iter)
+	}
+	
+	names(f1.B) <- paste('rate_',rate, sep='')
+	names(rl.B) <- paste('rate_',rate, sep='')
+
+	# generate qqplot
+	if (!is.null(out.dir)){
+		cur.out.dir <-  paste(out.dir,'/qqplot' , sep='')		
+		if (!file.exists(cur.out.dir)) 
+			dir.create(cur.out.dir, recursive = TRUE)
+		prop.last <- collapse.rl(rl.B[[length(rate)]], item = 'prop')
+		avg.n.last <- collapse.rl(rl.B[[length(rate)]], item = 'avg_n')
+		for (i in 1:(length(rate)-1)){
+			prop.i <- collapse.rl(rl.B[[i]], item='prop')
+			avg.n.i <- collapse.rl(rl.B[[i]], item = 'avg_n')
+			file <- paste(cur.out.dir,'/rate_',rate[i],'_vs_',rate[length(rate)],'.pdf', sep='')
+			pdf(file)
+			qqplot(prop.i, prop.last, xlim=c(0,1), ylim=c(0,1), 
+				xlab=paste('rate = ', rate[i],'\n','average number of subreads = ', round(mean(avg.n.i),2), sep=''),
+				ylab=paste('rate = ', rate[length(rate)], '\n','average number of subreads = ', round(mean(avg.n.last),2), sep=''), main='')
+			abline(0,1,col='blue', lwd=2)
+			dev.off()			
+		}		
+	}
+		
+	list(f1.B=f1.B, rl.B=rl.B)
+	
+}
+
+
+sample_subreads <- function(genomeF, rate)
+{
+	if (rate<0 | rate>1) rate<-1
+	if (is.null(genomeF$features$moleculeID_pos) | is.null(genomeF$features$moleculeID_neg))
+                stop('can not find molecule ID in genomeF.native')
+
+	# forward strand
+        cat('sampling forward strand, rate is', rate,'\n')
+        for (i in 1:length(genomeF$features$ipd_pos)){
+		cur.ref <- names(genomeF.native$features$ipd_pos[i])
+		cat(cur.ref,'\n')
+		for (j in 1:length(genomeF$features$ipd_pos[[i]])){
+			IPD <- genomeF$features$ipd_pos[[i]][[j]]
+			idx <- genomeF$features$moleculeID_pos[[i]][[j]]
+			cur.rl <- .Call('R_API_sample_subreads', IPD, idx, rate)
+			genomeF$features$ipd_pos[[i]][[j]] <- cur.rl$IPD
+			genomeF$features$moleculeID_pos[[i]][[j]] <- cur.rl$idx	
+				
+			if (j==1000*floor(j/1000)) cat(j,'\r')
+		}
+		cat(length(genomeF$features$ipd_pos[[i]]),'\n')
+        }
+
+	# backward strand
+        cat('sampling backward strand, rate is', rate,'\n')
+        for (i in 1:length(genomeF$features$ipd_neg)){
+                cur.ref <- names(genomeF.native$features$ipd_neg[i])
+                cat(cur.ref,'\n')
+                for (j in 1:length(genomeF$features$ipd_neg[[i]])){
+                        IPD <- genomeF$features$ipd_neg[[i]][[j]]
+                        idx <- genomeF$features$moleculeID_neg[[i]][[j]]
+                        cur.rl <- .Call('R_API_sample_subreads', IPD, idx, rate)
+                        genomeF$features$ipd_neg[[i]][[j]] <- cur.rl$IPD
+                        genomeF$features$moleculeID_neg[[i]][[j]] <- cur.rl$idx
+
+                        if (j==1000*floor(j/1000)) cat(j,'\r')
+                }
+                cat(length(genomeF$features$ipd_neg[[i]]),'\n')
+        }
+
+	genomeF	
+}
+
+
+
+
+
 detectModPropEB <- function(genomeF.native, genomeF.wga, f1.x, f1.y, max.iter = 100)
 {
 	if (is.null(genomeF.native$features$moleculeID_pos) | is.null(genomeF.native$features$moleculeID_neg))
 		stop('can not find molecule ID in genomeF.native')
+
+	s <- diff(f1.x)[1]
+        f1.int <- sum(f1.y*s)
+        if (abs(f1.int - 1)>=1e-6) stop('f1 is not a valid density function')
+        if (any(f1.x != sort(f1.x))) stop('f1.x should be sorted')
+
 	
 	rl <- list()
 	rl$pos <- list()
@@ -47,9 +160,10 @@ EB.mixture.model <- function(IPD, idx, mu.0 = 0, sigma.0 = 1, f1.x, f1.y, max.it
 	s <- diff(f1.x)[1]
 	f1.int <- sum(f1.y*s)
 	if (abs(f1.int - 1)>=1e-6) stop('f1 is not a valid density function')
+	if (any(f1.x != sort(f1.x))) stop('f1.x should be sorted')
 
 	.Call('R_API_EBmixture', as.numeric(IPD), as.numeric(idx), as.numeric(mu.0), as.numeric(sigma.0),
-		 as.numeric(f1.x), as.numeric(f1.y),  as.integer(max.iter))
+		 as.numeric(f1.x), as.numeric(f1.y), as.integer(max.iter))
 }
 
 
@@ -93,7 +207,7 @@ EB.mixture.model.pooling <- function(z.score, mu.0 = 0, sigma.0 = 1, f1.x, f1.y,
 
 
 estimate.f1 <- function(genomeF.native, genomeF.wga, nulltype = 1, locfdr.df = 14, locfdr.pct0 = 1/4, locfdr.bre = 120, 
-			f1.df = 14, f1.bre = 120, out.dir = NULL)
+			f1.df = 56, f1.bre = 120, out.dir = NULL)
 {
 	if (!is.null(out.dir)){
 		if (!file.exists(out.dir))	
@@ -106,6 +220,7 @@ estimate.f1 <- function(genomeF.native, genomeF.wga, nulltype = 1, locfdr.df = 1
 	
 	# estimate local FDR
 	zz <- z.score.pool[idx.sel]
+	rm(z.score.pool);gc()
 	if (!is.null(out.dir)){
 		file <- paste(out.dir,'/','locfdr_report.pdf', sep='')
 		pdf(file)
@@ -117,17 +232,26 @@ estimate.f1 <- function(genomeF.native, genomeF.wga, nulltype = 1, locfdr.df = 1
 
 	# get weighted histogram of f1
 	w <- 1 - rl.fdr$fdr
-	w[w<=1e-6 | zz<0] <- 0
-	idx <- idx.sel[w>1e-6]
+	w[w<=1e-3 | zz<0] <- 0
+	rm(rl.fdr);gc()
 	
-	breaks <- seq(min(d.pool[idx]), max(d.pool[idx]), length=f1.bre)
+	idx.w <- which(w>1e-3)
+	idx <- idx.sel[idx.w]
+	
+	d.pool.idx <- d.pool[idx]
+	w.idx <- w[idx.w]
+	rm(d.pool);gc()
+	rm(w);gc()
+	
+	
+	breaks <- seq(min(d.pool.idx), max(d.pool.idx), length=f1.bre)
 	if (!is.null(out.dir)){
                 file <- paste(out.dir,'/','f1_d_hist.pdf', sep='')
                 pdf(file)
-			f1.hist <- wtd.hist(d.pool[idx], weight=w[idx], breaks=breaks)
+			f1.hist <- wtd.hist(d.pool.idx, weight=w.idx, breaks=breaks)
                 dev.off()
         }else{
-		f1.hist <- wtd.hist(d.pool[idx], weight=w[idx], breaks=breaks, plot=FALSE)
+		f1.hist <- wtd.hist(d.pool.idx, weight=w.idx, breaks=breaks, plot=FALSE)
         }
 	
 	# fit f1 
@@ -141,7 +265,7 @@ estimate.f1 <- function(genomeF.native, genomeF.wga, nulltype = 1, locfdr.df = 1
 	if (!is.null(out.dir)){
                 file <- paste(out.dir,'/','f1_fitted.pdf', sep='')
                 pdf(file)
-                        f1.hist <- wtd.hist(d.pool[idx], weight=w[idx], breaks=breaks, freq=FALSE)
+                        f1.hist <- wtd.hist(d.pool.idx, weight=w.idx, breaks=breaks, freq=FALSE)
 			lines(f1.hist$mids, f1$fitted.values, col='blue')
                 dev.off()
 	}

@@ -1,4 +1,35 @@
 #include "EBmixture.h"
+map<string, vector<double> >  EBmixture::subsample(double *ipd, double *idx, int len_ipd, int len_idx, double rate)
+{
+	map<string, vector<double> > rl;
+
+	if (len_ipd != len_idx){ printf("length of R_IPD and R_idx should be the same.\n"); return rl;}
+	
+	ipd_map.clear();
+
+	int len = len_ipd;
+	for (int i=0; i<len; i++){
+		ipd_map[int(idx[i])].push_back(ipd[i]);
+	}
+
+	map<int, vector<double> >::iterator it = ipd_map.begin();
+	while(it!=ipd_map.end()){
+		int M = int(rate*it->second.size());
+		if (M < 1) M = 1;
+		it->second = sample_SELECT(it->second, M);
+		double cur_n = it->second.size();
+		
+		for (int i=0; i<cur_n; i++){
+			rl["IPD"].push_back(it->second[i]);
+			rl["idx"].push_back(double(it->first));	
+		}
+	
+		it++;
+	}
+		
+	return rl;
+}
+
 bool EBmixture::getMoleculeMeanIPD(double *ipd, double *idx, int len_ipd, int len_idx)
 {
 	if (len_ipd != len_idx){ printf("length of R_IPD and R_idx should be the same.\n"); return false;}
@@ -195,6 +226,8 @@ bool EBmixture::run()
 
 	return true;
 }
+
+
 
 
 

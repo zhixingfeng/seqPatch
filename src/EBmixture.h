@@ -6,6 +6,7 @@
 #include "SpecialFuns.h"
 #include "stl.h"
 #include "math_utils.h"
+#include "sampling.h"
 
 #ifndef ERR
 #define ERR 1e-10
@@ -36,6 +37,8 @@ class EBmixture
 			N_0.clear(); N_1.clear();
 			prop.clear();
 		}
+		map<string, vector<double> > subsample(double *ipd, double *idx, int len_ipd, int len_idx, double rate);
+		
 		bool getMoleculeMeanIPD(double *ipd, double *idx, int len_ipd, int len_idx);
 		vector<int> bin_search(double query, double *temp, int temp_len);		
 		bool run();
@@ -55,10 +58,12 @@ class EBmixture
 		vector<double> get_ipd_avg(){ return ipd_avg; }
                 vector<double> get_ipd_n(){ return ipd_n; }
                 vector<double> get_ipd_var() { return ipd_var;}
-
+	
+		map<int, vector<double> > get_ipd_map() {return ipd_map;}
 		// get result
 		int get_n_mol(){ return n_mol;}
-
+		double get_avg_n () {return mean(ipd_n);}
+		
 		vector<double> get_rho_0(){return rho_0;}
 		vector<double> get_rho_1(){return rho_1;}
 		vector<double> get_gamma_0(){return gamma_0;}
@@ -90,6 +95,8 @@ class EBmixture
 		vector<double> ipd_avg;
 		vector<double> ipd_n;
 		vector<double> ipd_var;
+		
+		map<int, vector<double> > ipd_map;
 
 		// results
 		int n_mol;	 
