@@ -240,6 +240,7 @@ estimate.f1 <- function(genomeF.native, genomeF.wga, nulltype = 1, locfdr.df = 1
 	
 	d.pool.idx <- d.pool[idx]
 	w.idx <- w[idx.w]
+	w.idx <- round(w.idx,6)
 	rm(d.pool);gc()
 	rm(w);gc()
 	
@@ -249,9 +250,11 @@ estimate.f1 <- function(genomeF.native, genomeF.wga, nulltype = 1, locfdr.df = 1
                 file <- paste(out.dir,'/','f1_d_hist.pdf', sep='')
                 pdf(file)
 			f1.hist <- wtd.hist(d.pool.idx, weight=w.idx, breaks=breaks)
+			#f1.hist <- weighted.hist(d.pool.idx, w.idx, breaks=breaks,plot=TRUE)
                 dev.off()
         }else{
 		f1.hist <- wtd.hist(d.pool.idx, weight=w.idx, breaks=breaks, plot=FALSE)
+		#f1.hist <- weighted.hist(d.pool.idx, w.idx, breaks=breaks,plot=FALSE)
         }
 	
 	# fit f1 
@@ -266,6 +269,7 @@ estimate.f1 <- function(genomeF.native, genomeF.wga, nulltype = 1, locfdr.df = 1
                 file <- paste(out.dir,'/','f1_fitted.pdf', sep='')
                 pdf(file)
                         f1.hist <- wtd.hist(d.pool.idx, weight=w.idx, breaks=breaks, freq=FALSE)
+			#f1.hist <- weighted.hist(d.pool.idx, w.idx, breaks=breaks, freq=FALSE,plot=TRUE)
 			lines(f1.hist$mids, f1$fitted.values, col='blue')
                 dev.off()
 	}
