@@ -67,15 +67,19 @@ sample_subreads <- function(genomeF, rate)
 	# forward strand
         cat('sampling forward strand, rate is', rate,'\n')
         for (i in 1:length(genomeF$features$ipd_pos)){
-		cur.ref <- names(genomeF.native$features$ipd_pos[i])
+		cur.ref <- names(genomeF$features$ipd_pos[i])
 		cat(cur.ref,'\n')
 		for (j in 1:length(genomeF$features$ipd_pos[[i]])){
 			IPD <- genomeF$features$ipd_pos[[i]][[j]]
 			idx <- genomeF$features$moleculeID_pos[[i]][[j]]
 			cur.rl <- .Call('R_API_sample_subreads', IPD, idx, rate)
-			genomeF$features$ipd_pos[[i]][[j]] <- cur.rl$IPD
-			genomeF$features$moleculeID_pos[[i]][[j]] <- cur.rl$idx	
-				
+			if (length(IPD)==0){
+				genomeF$features$ipd_pos[[i]][[j]] <- numeric(0)
+				genomeF$features$moleculeID_pos[[i]][[j]] <- numeric(0)
+			}else{
+				genomeF$features$ipd_pos[[i]][[j]] <- cur.rl$IPD
+				genomeF$features$moleculeID_pos[[i]][[j]] <- cur.rl$idx	
+			}
 			if (j==1000*floor(j/1000)) cat(j,'\r')
 		}
 		cat(length(genomeF$features$ipd_pos[[i]]),'\n')
@@ -84,15 +88,19 @@ sample_subreads <- function(genomeF, rate)
 	# backward strand
         cat('sampling backward strand, rate is', rate,'\n')
         for (i in 1:length(genomeF$features$ipd_neg)){
-                cur.ref <- names(genomeF.native$features$ipd_neg[i])
+                cur.ref <- names(genomeF$features$ipd_neg[i])
                 cat(cur.ref,'\n')
                 for (j in 1:length(genomeF$features$ipd_neg[[i]])){
                         IPD <- genomeF$features$ipd_neg[[i]][[j]]
                         idx <- genomeF$features$moleculeID_neg[[i]][[j]]
                         cur.rl <- .Call('R_API_sample_subreads', IPD, idx, rate)
-                        genomeF$features$ipd_neg[[i]][[j]] <- cur.rl$IPD
-                        genomeF$features$moleculeID_neg[[i]][[j]] <- cur.rl$idx
-
+                        if (length(IPD)==0){
+                                genomeF$features$ipd_neg[[i]][[j]] <- numeric(0)
+                                genomeF$features$moleculeID_neg[[i]][[j]] <- numeric(0)
+                        }else{
+				genomeF$features$ipd_neg[[i]][[j]] <- cur.rl$IPD
+                        	genomeF$features$moleculeID_neg[[i]][[j]] <- cur.rl$idx
+			}
                         if (j==1000*floor(j/1000)) cat(j,'\r')
                 }
                 cat(length(genomeF$features$ipd_neg[[i]]),'\n')
