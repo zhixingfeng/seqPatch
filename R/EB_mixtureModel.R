@@ -215,7 +215,7 @@ EB.mixture.model.pooling <- function(z.score, mu.0 = 0, sigma.0 = 1, f1.x, f1.y,
 
 
 estimate.f1 <- function(genomeF.native, genomeF.wga, nulltype = 1, locfdr.df = 14, locfdr.pct0 = 1/4, locfdr.bre = 120, 
-			f1.df = 56, f1.bre = 120, out.dir = NULL)
+			f1.df = 14, f1.bre = 120, out.dir = NULL)
 {
 	if (!is.null(out.dir)){
 		if (!file.exists(out.dir))	
@@ -247,21 +247,23 @@ estimate.f1 <- function(genomeF.native, genomeF.wga, nulltype = 1, locfdr.df = 1
 	idx <- idx.sel[idx.w]
 	
 	d.pool.idx <- d.pool[idx]
+	#d.pool.idx <- round(d.pool.idx, 6)	
 	w.idx <- w[idx.w]
-	w.idx <- round(w.idx,6)
+	#w.idx <- round(w.idx,6)
 	rm(d.pool);gc()
 	rm(w);gc()
 	
 	
 	breaks <- seq(min(d.pool.idx), max(d.pool.idx), length=f1.bre)
+	#breaks[2:(length(breaks)-1)] <- round(breaks[2:(length(breaks)-1)], 6)
 	if (!is.null(out.dir)){
                 file <- paste(out.dir,'/','f1_d_hist.pdf', sep='')
                 pdf(file)
-			f1.hist <- wtd.hist(d.pool.idx, weight=w.idx, breaks=breaks)
+			f1.hist <- m.wtd.hist(d.pool.idx, weight=w.idx, breaks=breaks)
 			#f1.hist <- weighted.hist(d.pool.idx, w.idx, breaks=breaks,plot=TRUE)
                 dev.off()
         }else{
-		f1.hist <- wtd.hist(d.pool.idx, weight=w.idx, breaks=breaks, plot=FALSE)
+		f1.hist <- m.wtd.hist(d.pool.idx, weight=w.idx, breaks=breaks, plot=FALSE)
 		#f1.hist <- weighted.hist(d.pool.idx, w.idx, breaks=breaks,plot=FALSE)
         }
 	
@@ -276,7 +278,7 @@ estimate.f1 <- function(genomeF.native, genomeF.wga, nulltype = 1, locfdr.df = 1
 	if (!is.null(out.dir)){
                 file <- paste(out.dir,'/','f1_fitted.pdf', sep='')
                 pdf(file)
-                        f1.hist <- wtd.hist(d.pool.idx, weight=w.idx, breaks=breaks, freq=FALSE)
+                        f1.hist <- m.wtd.hist(d.pool.idx, weight=w.idx, breaks=breaks, freq=FALSE)
 			#f1.hist <- weighted.hist(d.pool.idx, w.idx, breaks=breaks, freq=FALSE,plot=TRUE)
 			lines(f1.hist$mids, f1$fitted.values, col='blue')
                 dev.off()
