@@ -215,7 +215,7 @@ EB.mixture.model.pooling <- function(z.score, mu.0 = 0, sigma.0 = 1, f1.x, f1.y,
 
 
 estimate.f1 <- function(genomeF.native, genomeF.wga, nulltype = 1, locfdr.df = 14, locfdr.pct0 = 1/4, locfdr.bre = 120, 
-			f1.df = 14, f1.bre = 120, out.dir = NULL)
+			f1.df = 28, f1.bre = 120, out.dir = NULL)
 {
 	if (!is.null(out.dir)){
 		if (!file.exists(out.dir))	

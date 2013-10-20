@@ -37,7 +37,7 @@ vector<double> RNG_normal(int size, double mu, double sigma)
         return x;
 }
 
-vector<double> sample_SELECT (vector<double> data, int M)
+vector<double> sample_SELECT (vector<double> &data, int M)
 {
 	if (M==0) M = (int) data.size();
 	int n = data.size();
@@ -52,7 +52,7 @@ vector<double> sample_SELECT (vector<double> data, int M)
 	PutRNGstate();
 	return result;
 }
-vector<int> sample_SELECT (vector<int> data, int M)
+vector<int> sample_SELECT (vector<int> &data, int M)
 {
         if (M==0) M = (int) data.size();
         int n = data.size();

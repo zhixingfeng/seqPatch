@@ -1,3 +1,25 @@
+sim.genomeF.C <- function(prop=c(rep(1,50),rep(0.5,50), rep(0,20000)), genomeF.wga, d=1.5, factor.n.ccs = 1, factor.n.mol = 1)
+{
+	if(length(prop)>length(genomeF.wga$features$ipd_pos[[1]]))
+		stop('prop is too large')
+	n.ccs.all <- .Call('R_API_getNumCCS',genomeF.wga$features$ipd_pos[[1]],
+                                                genomeF.wga$features$moleculeID_pos[[1]], as.integer(1))
+	n.mol.all <- .Call('R_API_getNumMol',genomeF.wga$features$ipd_pos[[1]],
+                                                genomeF.wga$features$moleculeID_pos[[1]], as.integer(1))
+	mu.0 <- sapply(genomeF.wga$features$ipd_pos[[1]], mean)
+	sd.0 <- sapply(genomeF.wga$features$ipd_pos[[1]], sd)
+	
+	n.ccs.all <- round(n.ccs.all*factor.n.ccs)
+	n.mol.all <- round( n.mol.all*factor.n.mol)
+	n.ccs.all[n.ccs.all <= 0] <- 1
+	n.mol.all[n.mol.all <= 0] <- 1
+	rl <- .Call('R_API_getIPDandMolID', as.numeric(prop), as.numeric(n.ccs.all), as.numeric(n.mol.all),
+			as.numeric( mu.0), as.numeric(sd.0), as.numeric(d))	
+
+	rl
+}
+
+
 sim.genomeF <- function(prop=c(rep(1,50),rep(0.5,50), rep(0,20000)), n.mol.lambda = 30, n.ccs.lambda=5,
 		mu.0 = 0, sigma.0 = 1, mu.1=1.5, sigma.1 = 1)
 {

@@ -101,6 +101,105 @@ vector<int> bin_search(double query, double *temp, int temp_len)
 
 
 /*-----------------------R API-----------------------*/
+RcppExport SEXP R_API_getIPDandMolID(SEXP R_prop, SEXP R_n_ccs_all, SEXP R_n_mol_all, SEXP R_mu_0, SEXP R_sd_0, SEXP R_d)
+{
+	map<string, vector<vector<double> > > rl;
+	vector<double> prop(REAL(R_prop), REAL(R_prop) + Rf_length(R_prop));	
+	vector<double> n_ccs_all(REAL(R_n_ccs_all), REAL(R_n_ccs_all) + Rf_length(R_n_ccs_all));
+	vector<double> n_mol_all(REAL(R_n_mol_all), REAL(R_n_mol_all) + Rf_length(R_n_mol_all));		
+	vector<double> mu_0(REAL(R_mu_0), REAL(R_mu_0) + Rf_length(R_mu_0));
+	vector<double> sd_0(REAL(R_sd_0), REAL(R_sd_0) + Rf_length(R_sd_0));
+	double d = REAL(R_d)[0];
+		
+	int len = Rf_length(R_prop);	
+	vector<double> n_mol = RNG_sample(n_mol_all, len);
+
+	for (int i=0; i<len; i++){
+		int cur_n_mol = int(n_mol[i]);
+		vector<double> n_ccs = RNG_sample(n_ccs_all, cur_n_mol);
+		vector<double> mol_id;
+		for (int j=0; j<cur_n_mol; j++)
+			for (int k=0; k<n_ccs[j]; k++)
+				mol_id.push_back(j+1);
+		
+		int cur_n_mol_mod =  int(1.0*cur_n_mol * prop[i] + 0.5);
+		int cur_n_mol_unmod = cur_n_mol - cur_n_mol_mod;
+	
+		int cur_n_ipd_mod = 0;
+		for (int j=0; j<cur_n_mol_mod; j++){
+			cur_n_ipd_mod += n_ccs[j];
+		}	
+		int cur_n_ipd_unmod = mol_id.size() - cur_n_ipd_mod;
+		vector<double> IPD = RNG_normal(cur_n_ipd_mod, mu_0[i] + d, sd_0[i]);
+		vector<double> IPD_unmod = RNG_normal(cur_n_ipd_unmod, mu_0[i], sd_0[i]);			
+		for (int j=0; j<cur_n_ipd_unmod; j++)
+			IPD.push_back(IPD_unmod[j]);
+		rl["mol_id"].push_back(mol_id);
+		rl["IPD"].push_back(IPD);
+		if ((i+1) % 10000 == 0) 
+			Rprintf("%d\r",i+1);	
+	}	
+	Rprintf("%d\n",len);
+	//return Rcpp::wrap(n_mol);
+	return Rcpp::wrap(rl);
+}
+
+RcppExport SEXP R_API_getNumMol(SEXP R_ipd, SEXP R_mol_id)
+{
+	vector<double> num_mol;
+	for (int i=0;i<Rf_length(R_mol_id);i++){
+                double * ipd = REAL(VECTOR_ELT(R_ipd,i));
+                double * mol_id = REAL(VECTOR_ELT(R_mol_id,i));
+                int ipd_len = Rf_length(VECTOR_ELT(R_ipd,i));
+                int mol_id_len =  Rf_length(VECTOR_ELT(R_mol_id,i));
+                EBmixture EBmixtureObj;
+                EBmixtureObj.getMoleculeMeanIPD(ipd, mol_id, ipd_len, mol_id_len);
+                num_mol.push_back(EBmixtureObj.get_n_mol());
+        	if ((i+1)%10000==0) Rprintf("%d\r",i+1);
+        }
+        Rprintf("%d\n", Rf_length(R_mol_id));
+	return Rcpp::wrap(num_mol);
+
+}
+
+
+RcppExport SEXP R_API_getNumCCS(SEXP R_ipd, SEXP R_mol_id, SEXP R_is_collapse)
+{
+	int is_collapse = INTEGER(R_is_collapse)[0];
+	if (is_collapse == 0){
+		vector<vector<double> > num_ccs;	
+		for (int i=0;i<Rf_length(R_mol_id);i++){
+			double * ipd = REAL(VECTOR_ELT(R_ipd,i));
+			double * mol_id = REAL(VECTOR_ELT(R_mol_id,i));
+			int ipd_len = Rf_length(VECTOR_ELT(R_ipd,i));
+			int mol_id_len =  Rf_length(VECTOR_ELT(R_mol_id,i));
+			EBmixture EBmixtureObj;
+			EBmixtureObj.getMoleculeMeanIPD(ipd, mol_id, ipd_len, mol_id_len);
+			num_ccs.push_back(EBmixtureObj.get_ipd_n());
+			if ((i+1)%10000==0) Rprintf("%d\r",i+1);
+		}
+		Rprintf("%d\n", Rf_length(R_mol_id));
+		return Rcpp::wrap(num_ccs);
+	}else{
+		vector<double> num_ccs;
+		for (int i=0;i<Rf_length(R_mol_id);i++){
+                        double * ipd = REAL(VECTOR_ELT(R_ipd,i));
+                        double * mol_id = REAL(VECTOR_ELT(R_mol_id,i));
+                        int ipd_len = Rf_length(VECTOR_ELT(R_ipd,i));
+                        int mol_id_len =  Rf_length(VECTOR_ELT(R_mol_id,i));
+                        EBmixture EBmixtureObj;
+                        EBmixtureObj.getMoleculeMeanIPD(ipd, mol_id, ipd_len, mol_id_len);
+                        vector<double> cur_num_ccs = EBmixtureObj.get_ipd_n();
+			for (int j=0; j<(int)cur_num_ccs.size(); j++){
+				num_ccs.push_back(cur_num_ccs[j]);
+			}
+			if ((i+1)%10000==0) Rprintf("%d\r",i+1);
+                }
+                Rprintf("%d\n", Rf_length(R_mol_id));
+                return Rcpp::wrap(num_ccs);
+	}
+}
+
 RcppExport SEXP R_API_sample_subreads(SEXP R_IPD, SEXP R_idx, SEXP R_rate)
 {
 	double *IPD = REAL(R_IPD);	
@@ -391,8 +490,8 @@ RcppExport SEXP R_API_getZscoreSingleMolecule_CC(SEXP R_IPD_native, SEXP R_IPD_c
 		}
 		double * ipd_ctrl = REAL(VECTOR_ELT(R_IPD_ctrl,i_ctrl));
                 int n_ipd_ctrl = Rf_length(VECTOR_ELT(R_IPD_ctrl,i_ctrl));
-                double * mol_idx_ctrl = REAL(VECTOR_ELT(R_mol_id_ctrl,i_ctrl));
-                int n_mol_idx_ctrl = Rf_length(VECTOR_ELT(R_mol_id_ctrl,i_ctrl));
+                //double * mol_idx_ctrl = REAL(VECTOR_ELT(R_mol_id_ctrl,i_ctrl));
+                //int n_mol_idx_ctrl = Rf_length(VECTOR_ELT(R_mol_id_ctrl,i_ctrl));
 		
 		double ipd_avg_ctrl;
 		double ipd_var_ctrl;

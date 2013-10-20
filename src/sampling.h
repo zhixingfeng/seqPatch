@@ -12,9 +12,9 @@ vector<double> RNG_gamma(int size, int shape, double rate);
 
 vector<double> RNG_normal(int size, double mu, double sigma);
 
-vector<double> sample_SELECT (vector<double> data, int M = 0);
+vector<double> sample_SELECT (vector<double> &data, int M = 0);
 
-vector<int> sample_SELECT (vector<int> data, int M = 0);
+vector<int> sample_SELECT (vector<int> &data, int M = 0);
 
 vector<vector<double> > sample_group (vector<vector<double> > data_group);
 
