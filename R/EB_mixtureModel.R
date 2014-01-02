@@ -1,3 +1,24 @@
+get.nullGenomeF <- function(genomeF.wga, genomeSeq, left=10, right=3)
+{
+	IPD <- genomeF.wga$features$ipd_pos[[1]]
+	mol.id <- genomeF.wga$features$moleculeID_pos[[1]]
+	genome_start <- genomeF.wga$genome.start.pos[[1]]
+
+	cat('get homologous locus:\n')	
+	max_index <- .Call('R_API_getNullDist_ID',genomeSeq$pos[[1]], as.integer(left), as.integer(right))
+	cat('get genomeF:\n')
+	rl <- .Call('R_API_getNullDist', IPD, mol.id, as.integer(genome_start), max_index)
+
+	genomeF.wga$features$ipd_pos[[1]] <- rl$IPD
+	genomeF.wga$features$ipd_neg[[1]] <- rl$IPD
+	genomeF.wga$features$moleculeID_pos[[1]] <- rl$mol_id
+	genomeF.wga$features$moleculeID_neg[[1]] <- rl$mol_id
+	
+	genomeF.wga
+}
+
+
+
 collapse.rl <- function(rl, item = 'prop')
 {
 	rl.list <- list()

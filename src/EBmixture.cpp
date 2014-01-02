@@ -228,6 +228,53 @@ bool EBmixture::run()
 }
 
 
+map<string, vector<int> > EBmixture::buildGenomeIndex(string & genomeSeq, int seed_len)
+{
+        map<string, vector<int> > genomeIndex;
+        for (int i=0; (int) i<genomeSeq.size()-seed_len+1;i++){
+                string cur_context = genomeSeq.substr(i,seed_len);
+                genomeIndex[cur_context].push_back(i);
+        }
+        return genomeIndex;
+}
+
+vector<int> EBmixture::findMaxContext(int cur_idx, string & genomeSeq, 
+					map<string, vector<int> > &genomeIndex, int left_len, int right_len)
+{
+	int lim = 100;
+	vector<int> max_index;
+	int context_start = cur_idx - left_len;
+	int context_end = cur_idx + right_len;
+	if (context_start<0 | context_end>= (int) genomeSeq.size())
+		return max_index;
+	string context = genomeSeq.substr(context_start, context_end - context_start + 1);	
+	
+	vector<int> ref_index = genomeIndex[context];
+	int max_left_len = 0;
+	vector<int> left_ex(ref_index.size(),0);
+	for (int i=0; i<(int) ref_index.size(); i++){
+		left_ex[i] = 0;
+		if (context_start == ref_index[i])
+			continue;
+		for (int j=1; j<=lim; j++){
+			if (context_start - j<0 | ref_index[i] - j<0)
+				break;	
+			if (genomeSeq[context_start - j] != genomeSeq[ref_index[i] - j])
+				break;	
+			left_ex[i]++;	
+		}
+		if (left_ex[i]>max_left_len) 
+			max_left_len = left_ex[i];
+	}
+	
+	//if (max_left_len == 0)
+	//	return max_index;
+	for (int i=0; i<(int) ref_index.size(); i++){
+		if(left_ex[i] == max_left_len && ref_index[i]!=context_start)
+			max_index.push_back(ref_index[i] + left_len);
+	}
+	return max_index;	
+}
 
 
 

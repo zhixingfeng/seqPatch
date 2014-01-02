@@ -101,6 +101,76 @@ vector<int> bin_search(double query, double *temp, int temp_len)
 
 
 /*-----------------------R API-----------------------*/
+//RcppExport SEXP R_API_getNullDist_ID(SEXP R_genomeSeq, SEXP R_seed_len)
+RcppExport SEXP R_API_getNullDist_ID(SEXP R_genomeSeq, SEXP R_left, SEXP R_right)
+{
+	string genomeSeq = CHAR(STRING_ELT(R_genomeSeq,0));
+	//int seed_len = INTEGER(R_seed_len)[0];
+	int left = INTEGER(R_left)[0];
+	int right = INTEGER(R_right)[0];
+	int seed_len = left + right + 1;
+	EBmixture EBmixtureObj;
+	map<string, vector<int> > genome_index = EBmixtureObj.buildGenomeIndex(genomeSeq, seed_len);	
+	
+	vector<vector<int> > max_index_all;
+	for (int i=0; i<(int)genomeSeq.size(); i++){
+		vector<int> max_index = EBmixtureObj.findMaxContext(i, genomeSeq, genome_index, left, right);
+		max_index_all.push_back(max_index);
+		if ((i+1)%10000 == 0) Rprintf("%d\r",i+1);
+	}
+	Rprintf("%d\n",genomeSeq.size());
+	
+	return Rcpp::wrap(max_index_all);
+}
+
+RcppExport SEXP R_API_getNullDist(SEXP R_IPD, SEXP R_mol_id, SEXP R_start, SEXP R_max_index)
+{	
+	if (Rf_length(R_IPD) != Rf_length(R_mol_id) ){
+		Rprintf("length of IPD and molecule ID are not equal.\n");
+		return R_NilValue;
+	}
+	map<string, vector<vector<double> > > rl;
+			
+	int start = INTEGER(R_start)[0];	
+	int len = Rf_length(R_IPD);	
+	for (int i=0; i<len; i++){
+		int loci = start - 1 + i;
+		SEXP R_cur_max_index = VECTOR_ELT(R_max_index, loci);
+		vector<int> cur_max_index(INTEGER(R_cur_max_index), INTEGER(R_cur_max_index) + Rf_length(R_cur_max_index));
+		
+		if (cur_max_index.size()>0){
+			int loci_homo = RNG_sample(cur_max_index, 1)[0];
+			int i_homo = loci_homo - start + 1;
+			SEXP R_IPD_homo = VECTOR_ELT(R_IPD, i_homo);
+			SEXP R_mol_id_homo = VECTOR_ELT(R_mol_id, i_homo);
+			vector<double> IPD_homo(REAL(R_IPD_homo), REAL(R_IPD_homo) + Rf_length(R_IPD_homo));
+	                vector<double> mol_id_homo(REAL(R_mol_id_homo), REAL(R_mol_id_homo) + Rf_length(R_mol_id_homo));
+			vector<double> rl_i_homo;
+			rl_i_homo.push_back(i_homo);
+
+			rl["IPD"].push_back(IPD_homo);
+                        rl["mol_id"].push_back(mol_id_homo);
+			rl["i_homo"].push_back(rl_i_homo);
+
+		}else{
+			vector<double> IPD_homo;
+	                vector<double> mol_id_homo;
+			vector<double> rl_i_homo;
+			rl["IPD"].push_back(IPD_homo);	
+			rl["mol_id"].push_back(mol_id_homo);
+			rl["i_homo"].push_back(rl_i_homo);
+		}
+		if ((i+1)%10000 == 0)
+			Rprintf("%d\r",i+1);
+	}
+	Rprintf("%d\n",len);
+	return Rcpp::wrap(rl);
+	//return R_NilValue;
+}
+
+
+
+
 RcppExport SEXP R_API_getIPDandMolID(SEXP R_prop, SEXP R_n_ccs_all, SEXP R_n_mol_all, SEXP R_mu_0, SEXP R_sd_0, SEXP R_d)
 {
 	map<string, vector<vector<double> > > rl;
@@ -231,6 +301,7 @@ RcppExport SEXP R_API_detectModProp_EB(SEXP R_IPD_native, SEXP R_idx_native, SEX
 	vector<double> N_0(len, sqrt(-1));
 	vector<double> N_1(len, sqrt(-1));
 	vector<double> avg_n(len, sqrt(-1));
+	vector<double> cvg_wga(len, sqrt(-1));
 
 	for (int i=0; i<len; i++){
 		if ((i+1)%10000==0) Rprintf("processed %d sites\r",i+1);
@@ -266,6 +337,7 @@ RcppExport SEXP R_API_detectModProp_EB(SEXP R_IPD_native, SEXP R_idx_native, SEX
 		N_0[i] = EBmixtureObj.get_N_0();
 		N_1[i] = EBmixtureObj.get_N_1();
 		avg_n[i] = EBmixtureObj.get_avg_n();
+		cvg_wga[i] = n_ipd_wga;
 	}	
 	Rprintf("processed %d sites\n", len);
 
@@ -274,7 +346,7 @@ RcppExport SEXP R_API_detectModProp_EB(SEXP R_IPD_native, SEXP R_idx_native, SEX
 	rl["N_0"] = N_0;
 	rl["N_1"] = N_1;
 	rl["avg_n"] = avg_n;
-
+	rl["cvg_wga"] = cvg_wga;
 	return Rcpp::wrap(rl);
 }
 

@@ -77,7 +77,11 @@ class EBmixture
 		vector<double> get_N_0_track(){return N_0;}
 		vector<double> get_N_1_track(){return N_1;}
 		vector<double> get_prop_track(){return prop;}	
-		
+				
+		// evaluate significance
+		map<string, vector<int> > buildGenomeIndex(string & genomeSeq, int seed_len);
+		vector<int> findMaxContext(int cur_idx, string & genomeSeq, 
+						map<string, vector<int> > &genomeIndex, int left_len, int right_len);
 	public: 
 		double f1_log_int(double x_avg, double x_var,  double x_n);
 		

@@ -1,3 +1,29 @@
+getDetectedLoci.prop <- function(detection, prop.cutoff=0.35, n.mol.min=5, cvg.wga.min=20)
+{
+	detected.loci <- list()
+	detected.loci$pos <- list()
+	for (i in 1:length(detection$pos)){
+		cur.ref <- names(detection$pos[i])
+		n.mol <- detection$pos[[i]]$N_0 + detection$pos[[i]]$N_1
+		cvg.wga <- detection$pos[[i]]$cvg_wga
+		detected.loci$pos[[cur.ref]] <- which(detection$pos[[i]]$prop >= prop.cutoff &
+							n.mol >= n.mol.min & cvg.wga >= cvg.wga.min)
+	}
+
+	detected.loci$neg <- list()
+        for (i in 1:length(detection$neg)){
+                cur.ref <- names(detection$neg[i])
+                n.mol <- detection$neg[[i]]$N_0 + detection$neg[[i]]$N_1
+                cvg.wga <- detection$neg[[i]]$cvg_wga
+                detected.loci$neg[[cur.ref]] <- which(detection$neg[[i]]$prop >= prop.cutoff &
+                                                        n.mol >= n.mol.min & cvg.wga >= cvg.wga.min)
+        }
+	
+	detected.loci	
+}
+
+
+
 get.detected.sites <- function(detection, left.cutoff, right.cutoff, stat='z.stat',
 			 genomeSeq=NULL, motif=NULL, shift=NULL)
 {
