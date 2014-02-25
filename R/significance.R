@@ -1,3 +1,63 @@
+match.nmol <- function(n.mol, n.mol.null, prop.null, cvg.wga, n.mol.min = 5, cvg.wga.cutoff = 25)
+{
+	if(!(length(n.mol.null)==length(prop.null) & length(prop.null)==length(cvg.wga))){
+		stop('lenght of n.mol.null, prop.null and cvg.wga should be the same.')
+	}
+	idx <- which(n.mol.null>=n.mol.min)
+	n.mol <- as.integer(n.mol[n.mol>=n.mol.min])
+	n.mol.null <- as.integer(n.mol.null[idx])
+	cvg.wga <- as.integer(cvg.wga[idx])
+	prop.null <- prop.null[idx]
+	
+	idx.wga <- which(cvg.wga>=cvg.wga.cutoff)
+	n.mol.null <- n.mol.null[idx.wga]
+	prop.null <- prop.null[idx.wga]
+
+	
+	n.mol.dens <- hist(n.mol, plot=FALSE, breaks=0.5:(max(n.mol,na.rm=TRUE)+0.5))
+	n.mol.null.dens <- hist(n.mol.null, plot=FALSE, breaks=0.5:(max(n.mol.null, na.rm=TRUE)+0.5))
+	
+	bd <- min(max(n.mol,na.rm=TRUE), max(n.mol.null, na.rm=TRUE))
+	#bd <- quantile(n.mol.null, probs=1)	
+	#mids <- 1:bd
+	
+	counts <- c(n.mol.dens$counts[n.mol.dens$mids<=bd], sum(n.mol.dens$counts[n.mol.dens$mids>bd]))
+	counts.null <- c(n.mol.null.dens$counts[n.mol.null.dens$mids<=bd], sum(n.mol.null.dens$counts[n.mol.null.dens$mids>bd]))
+	dens <- counts / sum(counts)
+	dens.null <- counts.null / sum(counts.null)
+
+	p.sample <- dens / dens.null	
+	p.sample[dens.null==0] <- 0		
+	C <- max(p.sample) + 0.0001
+	
+	p.sample <- p.sample / C
+	
+	N <- round(counts.null*p.sample)
+	prop.sample <- list()
+	n.mol.sample <- list()
+	for (i in 1:bd){
+		cur.idx <- which(n.mol.null==i)
+		if(N[i]<1){
+			prop.sample[[i]] <- numeric(0)
+			n.mol.sample[[i]] <- numeric(0)
+		}else{
+			prop.sample[[i]] <- sample(prop.null[cur.idx], N[i]) 
+			n.mol.sample[[i]] <- sample(n.mol.null[cur.idx], N[i])	
+		}
+	}
+	
+	#cur.idx <- which(n.mol.null>bd)
+        #if(N[bd+1]<1){
+        #	prop.sample[[bd+1]] <- numeric(0)
+        #        n.mol.sample[[bd+1]] <- numeric(0)
+        #}else{
+       # 	prop.sample[[bd+1]] <- sample(prop.null[cur.idx], N[bd+1])
+       #         n.mol.sample[[bd+1]] <- sample(n.mol.null[cur.idx], N[bd+1])
+       # }
+	
+	unlist(prop.sample)
+}
+
 getDetectedLoci.prop <- function(detection, prop.cutoff=0.35, n.mol.min=5, cvg.wga.min=20)
 {
 	detected.loci <- list()

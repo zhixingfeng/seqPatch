@@ -1,4 +1,4 @@
-checkHemiModification <- function(genomeF.native, genomeF.ctrl=NULL, idx.pos, idx.neg, dir=NULL, is.simple=FALSE)
+checkHemiModification <- function(genomeF.native, genomeF.ctrl=NULL, idx.pos, idx.neg, dir=NULL, is.simple=FALSE, format='pdf')
 {
 	if (length(idx.pos) != length(idx.neg)) 
 		stop('length of idx.pos and idx.neg should be the same.')	
@@ -22,7 +22,11 @@ checkHemiModification <- function(genomeF.native, genomeF.ctrl=NULL, idx.pos, id
 		if (!file.exists(dir))	
 			dir.create(dir, recursive = TRUE)
 		file <- paste(dir,'/','hemi_mod_pos_',idx.pos[i],'_neg_',idx.neg[i],'.png',sep='')
-		png(file)
+		if (format=='pdf'){
+			pdf(file)
+		}else{
+			png(file)
+		}
 		if (is.simple == TRUE){
 			plot(ipd.pos.avg, ipd.neg.avg, xlim=range(ipd.pos.avg, ipd.neg.avg), ylim=range(ipd.pos.avg, ipd.neg.avg),
 				xlab='IPD forward strand', ylab='IPD backward strand', main=paste('PCC =', round(cor.all[i],2)))
