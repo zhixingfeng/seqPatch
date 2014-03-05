@@ -168,18 +168,19 @@ bool EBmixture::run()
 	prop.push_back(-1);
 
 	// integrate out mu1
-	vector<double> f1_log_z_all(n_mol, sqrt(-1));	
-	for (int i=0; i<n_mol; i++)
-		f1_log_z_all[i] = f1_log_int(ipd_avg[i], ipd_var[i], ipd_n[i]);
+	//vector<double> f1_log_z_all(n_mol, sqrt(-1));	
+	//for (int i=0; i<n_mol; i++)
+	//	f1_log_z_all[i] = f1_log_int(ipd_avg[i], ipd_var[i], ipd_n[i]);
+	
 	// iterate
-	double eps = 1e-4;	
+	double eps = 1e-3;	
 	iter = 1;
 	while (iter <= max_iter){
 		// update delta
 		for (int i = 0;i < n_mol; i++){
 			double f0_log_z = f0_log(ipd_avg[i], ipd_var[i], ipd_n[i]);
-                	//double f1_log_z = f1_log_int(ipd_avg[i], ipd_var[i], ipd_n[i]);
-                	double f1_log_z = f1_log_z_all[i];
+                	double f1_log_z = f1_log_int(ipd_avg[i], ipd_var[i], ipd_n[i]);
+                	//double f1_log_z = f1_log_z_all[i];
 			double gamma_0_core = f1_log_z + digamma(N_1[iter-1] + 1) - f0_log_z - digamma(N_0[iter-1] + 1);
 			gamma_0[i] = 1 / (1 + exp(gamma_0_core)) ;
 	                if (gamma_0_core <= -12)
@@ -198,28 +199,63 @@ bool EBmixture::run()
 		
 	
 		// update f_mu_1;
-		/*int s_len = f_mu_1.size(); 
+		int s_len = f_mu_1.size();
+		// (pre-compute coefficient determined by data)
+		vector<double> coefs_log_sum;
+		double coefs_log_sum_max = -1e24 ;
+		//Rprintf("coefs_log_sum : ");
 		for (int i=0; i < s_len; i++){
+			double cur_mu_1 = f1_x[i];
+			double cur_coefs_log_sum = 0;
+			for (int j=0; j<n_mol; j++){
+				double log_dens_fun = -( ipd_n[j]* ( (ipd_avg[j] - cur_mu_1)*(ipd_avg[j] - cur_mu_1) + ipd_var[j]) ) / (2.0*sigma_1*sigma_1)
+							 - ipd_n[j]*log(2.0*my_pi) / 2.0 - ipd_n[j]*log(sigma_1);
+				cur_coefs_log_sum += gamma_1[j]*log_dens_fun;
+				//double dens_fun = exp(gamma_1[j] * log_dens_fun); 
+			}
+		//	Rprintf("%.4lf ", cur_coefs_log_sum);
+			coefs_log_sum.push_back(cur_coefs_log_sum);
+			if (coefs_log_sum_max < cur_coefs_log_sum)
+				coefs_log_sum_max = cur_coefs_log_sum;
+		}	
+		//Rprintf("\n");
+		//Rprintf("coefs_log_sum_max : %.4lf\n",coefs_log_sum_max);
+		
+		//Rprintf("f_mu_1_unnorm : ");
+ 		for (int i=0; i < s_len; i++){
+			double cur_f_mu_1_log =  coefs_log_sum[i] + log(f1_y[i]) - coefs_log_sum_max;
+			double cur_f_mu_1;
+			if (cur_f_mu_1_log <= -100)
+				cur_f_mu_1 = 0;
+			else 
+				cur_f_mu_1 = exp(cur_f_mu_1_log);
+			if (f1_y[i]<=1e-12) cur_f_mu_1 = 1e-12;
+                        f_mu_1[i] = cur_f_mu_1;	
+		//	Rprintf("%.4lf ", f_mu_1[i]);
+		}
+		/*for (int i=0; i < s_len; i++){
 			double cur_f_mu_1 = 0;
 			double cur_mu_1 = f1_x[i];
 			for (int j=0; j<n_mol; j++){
-				cur_f_mu_1 += gamma_1[j]*ipd_n[j]*(ipd_avg[j] - cur_mu_1)*(ipd_avg[j] - cur_mu_1);
+				cur_f_mu_1 += gamma_1[j]*ipd_n[j]*(ipd_avg[j] - cur_mu_1)*(ipd_avg[j] - cur_mu_1) + log(sigma_1);
 			}			
 			
 			cur_f_mu_1 = exp(- cur_f_mu_1/(2*sigma_1*sigma_1) + log(f1_y[i]) );
 			if (f1_y[i]<=1e-12) cur_f_mu_1 = 1e-12;
 			f_mu_1[i] = cur_f_mu_1;
-		}
+		}*/
 		double f_mu_1_C = 0;
 		for (int i=0; i<s_len; i++){
 			f_mu_1_C += f_mu_1[i];
 		}		
 		f_mu_1_C *= s;
-	
+		
+		//Rprintf("\nf_mu_1_norm : ");	
 		for (int i=0; i<s_len; i++){
                         f_mu_1[i] = f_mu_1[i] / f_mu_1_C;
-                }*/
-
+                //	Rprintf("%.4lf ", f_mu_1[i]);
+		}
+		//Rprintf("\n");
 		if (fabs(prop[iter] - prop[iter-1]) <= eps) break;
 		iter ++;
 	}	

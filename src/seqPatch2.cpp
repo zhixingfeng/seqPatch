@@ -302,9 +302,10 @@ RcppExport SEXP R_API_detectModProp_EB(SEXP R_IPD_native, SEXP R_idx_native, SEX
 	vector<double> N_1(len, sqrt(-1));
 	vector<double> avg_n(len, sqrt(-1));
 	vector<double> cvg_wga(len, sqrt(-1));
+	vector<double> n_iter(len, sqrt(-1));
 
 	for (int i=0; i<len; i++){
-		if ((i+1)%10000==0) Rprintf("processed %d sites\r",i+1);
+		if ((i+1)%1000==0) Rprintf("processed %d sites\r",i+1);
 		double * IPD_native = REAL(VECTOR_ELT(R_IPD_native,i));
 		int n_IPD_native = Rf_length(VECTOR_ELT(R_IPD_native,i));			
 		double * idx_native = REAL(VECTOR_ELT(R_idx_native,i));
@@ -338,6 +339,7 @@ RcppExport SEXP R_API_detectModProp_EB(SEXP R_IPD_native, SEXP R_idx_native, SEX
 		N_1[i] = EBmixtureObj.get_N_1();
 		avg_n[i] = EBmixtureObj.get_avg_n();
 		cvg_wga[i] = n_ipd_wga;
+		n_iter[i] = EBmixtureObj.get_n_iter();	
 	}	
 	Rprintf("processed %d sites\n", len);
 
@@ -347,6 +349,7 @@ RcppExport SEXP R_API_detectModProp_EB(SEXP R_IPD_native, SEXP R_idx_native, SEX
 	rl["N_1"] = N_1;
 	rl["avg_n"] = avg_n;
 	rl["cvg_wga"] = cvg_wga;
+	rl["n_iter"] = n_iter;
 	return Rcpp::wrap(rl);
 }
 

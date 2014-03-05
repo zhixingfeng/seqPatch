@@ -21,10 +21,11 @@ checkHemiModification <- function(genomeF.native, genomeF.ctrl=NULL, idx.pos, id
 			next
 		if (!file.exists(dir))	
 			dir.create(dir, recursive = TRUE)
-		file <- paste(dir,'/','hemi_mod_pos_',idx.pos[i],'_neg_',idx.neg[i],'.png',sep='')
 		if (format=='pdf'){
+			file <- paste(dir,'/','hemi_mod_pos_',idx.pos[i],'_neg_',idx.neg[i],'.pdf',sep='')
 			pdf(file)
 		}else{
+			file <- paste(dir,'/','hemi_mod_pos_',idx.pos[i],'_neg_',idx.neg[i],'.png',sep='')
 			png(file)
 		}
 		if (is.simple == TRUE){
@@ -38,12 +39,13 @@ checkHemiModification <- function(genomeF.native, genomeF.ctrl=NULL, idx.pos, id
 			den.ctrl.neg <- density(ipd.ctrl.neg)
 			den.pos <- density(ipd.pos.avg)
 			den.neg <- density(ipd.neg.avg)
-			par(mfrow=c(2,2))
+			#par(mfrow=c(2,2))
+			layout(matrix(c(1,0,2,3), 2, 2, byrow = TRUE))
 			plot(den.pos, xlim=range(ipd.pos.avg, ipd.neg.avg, ipd.ctrl.pos, ipd.ctrl.neg),
 				ylim=range(den.pos$y, den.ctrl.pos$y),
 				 main='', xlab='IPD forward strand', col='red')
 			lines(den.ctrl.pos, col='blue', lty=22)	
-			plot(1,type='n')
+			#plot(1,type='n')
 			plot(ipd.pos.avg, ipd.neg.avg, xlim=range(ipd.pos.avg, ipd.neg.avg, ipd.ctrl.pos, ipd.ctrl.neg),
 				ylim=range(ipd.pos.avg, ipd.neg.avg, ipd.ctrl.pos, ipd.ctrl.neg),
 				xlab='IPD forward strand', ylab='IPD backward strand', main=paste('PCC =', round(cor.all[i],2)))
