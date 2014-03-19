@@ -377,6 +377,8 @@ RcppExport SEXP R_API_EBmixture(SEXP R_IPD, SEXP R_idx, SEXP R_mu_0, SEXP R_sigm
 				Rcpp::Named("ipd_var")=Rcpp::wrap(EBmixtureObj.get_ipd_var()),
 				Rcpp::Named("n_mol")=Rcpp::wrap(EBmixtureObj.get_n_mol()),
                                 Rcpp::Named("prop")=Rcpp::wrap(EBmixtureObj.get_prop_track()),
+				Rcpp::Named("N_0")=Rcpp::wrap(EBmixtureObj.get_N_0_track()),
+				Rcpp::Named("N_1")=Rcpp::wrap(EBmixtureObj.get_N_1_track()),
 				Rcpp::Named("f_mu_1")=Rcpp::wrap(EBmixtureObj.get_f_mu_1()),
 				Rcpp::Named("f1_x")=Rcpp::wrap(EBmixtureObj.get_f1_x()),
 				Rcpp::Named("gamma_0")=Rcpp::wrap(EBmixtureObj.get_gamma_0()),
@@ -1022,13 +1024,20 @@ RcppExport SEXP test_f0(SEXP R_x_avg, SEXP R_x_var, SEXP R_x_n)
 	return Rcpp::wrap(EBmixtureObj.f0(x_avg, x_var, x_n));
 }
 
-RcppExport SEXP test_f0_log(SEXP R_x_avg, SEXP R_x_var, SEXP R_x_n)
+RcppExport SEXP test_f0_log(SEXP R_x_avg, SEXP R_x_var, SEXP R_x_n, SEXP R_mu_0, SEXP R_sigma_0, SEXP R_f1_x, SEXP R_f1_y)
 {
         double x_avg = REAL(R_x_avg)[0];
         double x_var = REAL(R_x_var)[0];
         double x_n = REAL(R_x_n)[0];
 
+	double mu_0 = REAL(R_mu_0)[0];
+        double sigma_0 = REAL(R_sigma_0)[0];
+        vector<double> f1_x(REAL(R_f1_x), REAL(R_f1_x) + Rf_length(R_f1_x));
+        vector<double> f1_y(REAL(R_f1_y), REAL(R_f1_y) + Rf_length(R_f1_y));
         EBmixture EBmixtureObj;
+        EBmixtureObj.setParameters(mu_0, sigma_0, f1_x, f1_y, 1);
+	
+
         return Rcpp::wrap(EBmixtureObj.f0_log(x_avg, x_var, x_n));
 }
 
@@ -1043,7 +1052,7 @@ RcppExport SEXP test_f1_log_int(SEXP R_x_avg, SEXP R_x_var, SEXP R_x_n, SEXP R_m
 	vector<double> f1_x(REAL(R_f1_x), REAL(R_f1_x) + Rf_length(R_f1_x));
 	vector<double> f1_y(REAL(R_f1_y), REAL(R_f1_y) + Rf_length(R_f1_y));
         EBmixture EBmixtureObj;
-	EBmixtureObj.setParameters(mu_0, sigma_0, f1_x, f1_y, 1);	
+	EBmixtureObj.setParameters(mu_0, sigma_0, f1_x, f1_y, 0);	
         EBmixtureObj.run();
 	return Rcpp::wrap(EBmixtureObj.f1_log_int(x_avg, x_var, x_n));
 }

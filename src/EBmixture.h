@@ -13,6 +13,13 @@
 #endif
 
 
+struct IPD_data
+{
+	double avg;
+	double var;
+	double n;
+};
+
 
 class EBmixture
 {
@@ -86,6 +93,9 @@ class EBmixture
 	public: 
 		double f1_log_int(double x_avg, double x_var,  double x_n);
 		
+	protected:
+		void ipd_sort();
+
 	protected:
 		// parameters
 		double mu_0;

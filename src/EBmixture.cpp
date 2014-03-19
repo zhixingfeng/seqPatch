@@ -1,4 +1,15 @@
 #include "EBmixture.h"
+
+bool operator<(const IPD_data& x, const IPD_data& y){ return x.avg < y.avg; }
+bool operator<=(const IPD_data& x, const IPD_data& y){ return x.avg <= y.avg; }
+bool operator>(const IPD_data& x, const IPD_data& y){ return x.avg > y.avg; }
+bool operator>=(const IPD_data& x, const IPD_data& y){ return x.avg >= y.avg; }
+bool operator==(const IPD_data& x, const IPD_data& y){ return x.avg == y.avg; }
+bool operator!=(const IPD_data& x, const IPD_data& y){ return x.avg != y.avg; }
+
+
+
+
 map<string, vector<double> >  EBmixture::subsample(double *ipd, double *idx, int len_ipd, int len_idx, double rate)
 {
 	map<string, vector<double> > rl;
@@ -157,6 +168,7 @@ double EBmixture::f1_log(double x)
 bool EBmixture::run()
 {
 	clear();
+	//ipd_sort();
 	// Initialize
 	f_mu_1 = f1_y;		
 	N_0.push_back(n_mol / 2.0);
@@ -171,25 +183,36 @@ bool EBmixture::run()
 	//vector<double> f1_log_z_all(n_mol, sqrt(-1));	
 	//for (int i=0; i<n_mol; i++)
 	//	f1_log_z_all[i] = f1_log_int(ipd_avg[i], ipd_var[i], ipd_n[i]);
-	
+	int s_len = f_mu_1.size();
+	double f1_x_mean = 0;
+	for (int i=0; i<s_len; i++){
+        	f1_x_mean += f1_x[i]*f_mu_1[i];           
+	} 	
+	f1_x_mean = f1_x_mean*s;
 	// iterate
 	double eps = 1e-3;	
 	iter = 1;
 	while (iter <= max_iter){
-		// update delta
+		// update I
+		
+		//Rprintf("f0_log_z,f1_log_z,f1_log_z_norm, gamma_0_core:\n");
+
 		for (int i = 0;i < n_mol; i++){
 			double f0_log_z = f0_log(ipd_avg[i], ipd_var[i], ipd_n[i]);
                 	double f1_log_z = f1_log_int(ipd_avg[i], ipd_var[i], ipd_n[i]);
-                	//double f1_log_z = f1_log_z_all[i];
+			//double f1_log_z = f1_log_z_all[i];
 			double gamma_0_core = f1_log_z + digamma(N_1[iter-1] + 1) - f0_log_z - digamma(N_0[iter-1] + 1);
+			//Rprintf("(%.4lf,%.4lf,%.4lf,%.4lf) ",f0_log_z, f1_log_z, f1_log_z/ipd_n[i], gamma_0_core);
 			gamma_0[i] = 1 / (1 + exp(gamma_0_core)) ;
 	                if (gamma_0_core <= -12)
 				gamma_0[i] = 1;
 			if (gamma_0_core >= 12)
 				gamma_0[i] = 0;
 			gamma_1[i] = 1 - gamma_0[i];
+				
+			
 		}			
-
+		//Rprintf("\n");
 		// update N_0 and N_1
 		double cur_N_0 = sum(gamma_0);
 		double cur_N_1 = sum(gamma_1);
@@ -199,7 +222,7 @@ bool EBmixture::run()
 		
 	
 		// update f_mu_1;
-		int s_len = f_mu_1.size();
+		//int s_len = f_mu_1.size();
 		// (pre-compute coefficient determined by data)
 		vector<double> coefs_log_sum;
 		double coefs_log_sum_max = -1e24 ;
@@ -215,24 +238,25 @@ bool EBmixture::run()
 			}
 		//	Rprintf("%.4lf ", cur_coefs_log_sum);
 			coefs_log_sum.push_back(cur_coefs_log_sum);
-			if (coefs_log_sum_max < cur_coefs_log_sum)
-				coefs_log_sum_max = cur_coefs_log_sum;
+			if (coefs_log_sum_max < cur_coefs_log_sum + (1+cur_N_1)*log(f1_y[i]))
+				coefs_log_sum_max = cur_coefs_log_sum + (1+cur_N_1)*log(f1_y[i]);
 		}	
 		//Rprintf("\n");
 		//Rprintf("coefs_log_sum_max : %.4lf\n",coefs_log_sum_max);
 		
 		//Rprintf("f_mu_1_unnorm : ");
  		for (int i=0; i < s_len; i++){
-			double cur_f_mu_1_log =  coefs_log_sum[i] + log(f1_y[i]) - coefs_log_sum_max;
+			double cur_f_mu_1_log =  coefs_log_sum[i] + (1+cur_N_1)*log(f1_y[i]) - coefs_log_sum_max;
 			double cur_f_mu_1;
-			if (cur_f_mu_1_log <= -100)
+			if (cur_f_mu_1_log <= -12 | f1_y[i]<=1e-12)
 				cur_f_mu_1 = 0;
 			else 
 				cur_f_mu_1 = exp(cur_f_mu_1_log);
-			if (f1_y[i]<=1e-12) cur_f_mu_1 = 1e-12;
+			//if (f1_y[i]<=1e-12) cur_f_mu_1 = 1e-12;
                         f_mu_1[i] = cur_f_mu_1;	
 		//	Rprintf("%.4lf ", f_mu_1[i]);
 		}
+		//Rprintf("\n");
 		/*for (int i=0; i < s_len; i++){
 			double cur_f_mu_1 = 0;
 			double cur_mu_1 = f1_x[i];
@@ -250,12 +274,17 @@ bool EBmixture::run()
 		}		
 		f_mu_1_C *= s;
 		
-		//Rprintf("\nf_mu_1_norm : ");	
+		
 		for (int i=0; i<s_len; i++){
                         f_mu_1[i] = f_mu_1[i] / f_mu_1_C;
-                //	Rprintf("%.4lf ", f_mu_1[i]);
 		}
-		//Rprintf("\n");
+		
+		f1_x_mean = 0;
+        	for (int i=0; i<s_len; i++){
+                	f1_x_mean += f1_x[i]*f_mu_1[i];
+        	}
+        	f1_x_mean *=s ;
+	
 		if (fabs(prop[iter] - prop[iter-1]) <= eps) break;
 		iter ++;
 	}	
@@ -312,5 +341,24 @@ vector<int> EBmixture::findMaxContext(int cur_idx, string & genomeSeq,
 	return max_index;	
 }
 
+
+void EBmixture::ipd_sort()
+{
+	vector<IPD_data> ipd_data;
+	for (int i=0;(int)i<ipd_avg.size();i++){
+		IPD_data cur_ipd_data; 
+		cur_ipd_data.avg = ipd_avg[i];
+		cur_ipd_data.var = ipd_var[i];
+		cur_ipd_data.n = ipd_n[i];
+		ipd_data.push_back(cur_ipd_data);
+	}
+	sort(ipd_data.begin(), ipd_data.end());
+	for (int i=0;(int)i<ipd_avg.size();i++){
+              	ipd_avg[i] = ipd_data[i].avg;
+                ipd_var[i] = ipd_data[i].var;
+                ipd_n[i] = ipd_data[i].n;
+        }
+
+}
 
 
