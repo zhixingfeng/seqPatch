@@ -1,4 +1,4 @@
-loadCmpH5toGenomeF <- function(cmpH5.file, out.dir, n.chunk=10, normalization.method='bySubread', is.use.CCS=TRUE, is.return=FALSE, mapQV.cutoff=255)
+loadCmpH5toGenomeF <- function(cmpH5.file, out.dir, n.chunk=10, normalization.method='bySubread', is.use.CCS=TRUE, is.return=FALSE, mapQV.cutoff=255, reagent='C2')
 {
 	
 	if (!file.exists(out.dir))
@@ -29,7 +29,8 @@ loadCmpH5toGenomeF <- function(cmpH5.file, out.dir, n.chunk=10, normalization.me
 		alnsF.cur <- alnsF.cur[idx.sel]	
 		alnsIdx.cur <- alnsIdx.cur[idx.sel,]
 
-		alnsF.cur <- transformIPD(alnsF.cur)
+		if (reagent=='C2')
+			alnsF.cur <- transformIPD(alnsF.cur, alpha = 0.005, lambda = 0.16)
 		if (normalization.method=='bySubread')
 			alnsF.cur <- normalizeBySubread(alnsF.cur)
 		genomeF.cur <- getFeaturesAlongGenome(alnsF.cur, alnsIdx.cur, is.use.CCS)
