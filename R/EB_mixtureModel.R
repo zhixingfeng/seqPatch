@@ -289,15 +289,17 @@ estimate.f1 <- function(genomeF.native, genomeF.wga, nulltype = 1, locfdr.df = 2
         }
 	
 	# fit f1 
-	data <- as.data.frame(cbind(f1.hist$counts, f1.hist$mids))
-	names(data) <- c('y', 'x')
-	f1 <- glm(y~ns(x,df=f1.df), quasipoisson, data=data)		
-
+	#data <- as.data.frame(cbind(f1.hist$counts, f1.hist$mids))
+	#names(data) <- c('y', 'x')
+	#f1 <- glm(y~ns(x,df=f1.df), quasipoisson, data=data)		
+	
+	f1 <- list()
+	f1$fitted.values <- f1.hist$counts
 	s <- diff(breaks)[1]	
 	f1$fitted.values <- f1$fitted.values / sum(f1$fitted.values*s)	
 
 	if (!is.null(out.dir)){
-                file <- paste(out.dir,'/','f1_fitted.pdf', sep='')
+                file <- paste(out.dir,'/','f1_density.pdf', sep='')
                 pdf(file)
                         f1.hist <- m.wtd.hist(d.pool.idx, weight=w.idx, breaks=breaks, freq=FALSE)
 			#f1.hist <- weighted.hist(d.pool.idx, w.idx, breaks=breaks, freq=FALSE,plot=TRUE)
