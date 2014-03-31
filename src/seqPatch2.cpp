@@ -283,15 +283,22 @@ RcppExport SEXP R_API_sample_subreads(SEXP R_IPD, SEXP R_idx, SEXP R_rate)
 }
 
 RcppExport SEXP R_API_detectModProp_EB(SEXP R_IPD_native, SEXP R_idx_native, SEXP R_IPD_wga, SEXP R_start_native, 
-			SEXP R_start_wga, SEXP R_f1_x, SEXP R_f1_y, SEXP R_max_iter)
+			SEXP R_start_wga, SEXP R_f1_x, SEXP R_f1_y, SEXP R_is_f1_variable, SEXP R_max_iter, SEXP R_is_EM)
 {
 	int start_native = INTEGER(R_start_native)[0];
 	int start_wga = INTEGER(R_start_wga)[0];
 	int shift = start_native - start_wga;
 	vector<double> f1_x(REAL(R_f1_x), REAL(R_f1_x) + Rf_length(R_f1_x));
         vector<double> f1_y(REAL(R_f1_y), REAL(R_f1_y) + Rf_length(R_f1_y));
+
+	int is_f1_variable = INTEGER(R_is_f1_variable)[0];
 	int max_iter = INTEGER(R_max_iter)[0];
-	
+	int is_EM = INTEGER(R_is_EM)[0];
+	if (is_EM==0)
+		Rprintf("fit mixture by variational inference\n");
+	else 
+		Rprintf("fit mixture by EM algorithm\n");
+
 	int len = Rf_length(R_IPD_native);
 	int len_wga = Rf_length(R_IPD_wga);
 
@@ -303,6 +310,9 @@ RcppExport SEXP R_API_detectModProp_EB(SEXP R_IPD_native, SEXP R_idx_native, SEX
 	vector<double> avg_n(len, sqrt(-1));
 	vector<double> cvg_wga(len, sqrt(-1));
 	vector<double> n_iter(len, sqrt(-1));
+
+	vector<double> mu_d(len, sqrt(-1));
+	vector<double> mu_1(len, sqrt(-1));
 
 	for (int i=0; i<len; i++){
 		if ((i+1)%1000==0) Rprintf("processed %d sites\r",i+1);
@@ -328,18 +338,40 @@ RcppExport SEXP R_API_detectModProp_EB(SEXP R_IPD_native, SEXP R_idx_native, SEX
 			sigma_0 = sqrt((n_ipd_wga - 1)*var_c(ipd_wga, n_ipd_wga)/n_ipd_wga);
 		}
 		
-		EBmixture EBmixtureObj;
-        	EBmixtureObj.setParameters(mu_0, sigma_0, f1_x, f1_y, max_iter);
-        	EBmixtureObj.getMoleculeMeanIPD(IPD_native, idx_native, n_IPD_native, n_idx_native);
-        	EBmixtureObj.run();	
+		if (is_EM==0){
+			EBmixture EBmixtureObj;
+        		EBmixtureObj.setParameters(mu_0, sigma_0, f1_x, f1_y, max_iter);
+        		EBmixtureObj.getMoleculeMeanIPD(IPD_native, idx_native, n_IPD_native, n_idx_native);
+			if (is_f1_variable!=0)
+        			EBmixtureObj.run(true, true, 0.2);	
+			else 
+				EBmixtureObj.run(true, false, 0.2);
+			prop[i] = EBmixtureObj.get_prop();
+	                n_mol[i] = EBmixtureObj.get_n_mol();
+        	        N_0[i] = EBmixtureObj.get_N_0();
+                	N_1[i] = EBmixtureObj.get_N_1();
+                	avg_n[i] = EBmixtureObj.get_avg_n();
+                	cvg_wga[i] = n_ipd_wga;
+                	n_iter[i] = EBmixtureObj.get_n_iter();
+                	mu_d[i] = EBmixtureObj.get_mu_d();
+                	mu_1[i] = EBmixtureObj.get_mu_1();
 
-		prop[i] = EBmixtureObj.get_prop();	
-		n_mol[i] = EBmixtureObj.get_n_mol();
-		N_0[i] = EBmixtureObj.get_N_0();
-		N_1[i] = EBmixtureObj.get_N_1();
-		avg_n[i] = EBmixtureObj.get_avg_n();
-		cvg_wga[i] = n_ipd_wga;
-		n_iter[i] = EBmixtureObj.get_n_iter();	
+		}else{
+			EBmixture_EM EBmixtureObj;
+                        EBmixtureObj.setParameters(mu_0, sigma_0, f1_x, f1_y, max_iter);
+                        EBmixtureObj.getMoleculeMeanIPD(IPD_native, idx_native, n_IPD_native, n_idx_native);
+			EBmixtureObj.run(true, 0.2);
+			prop[i] = EBmixtureObj.get_prop();
+                	n_mol[i] = EBmixtureObj.get_n_mol();
+                	N_0[i] = EBmixtureObj.get_N_0();
+                	N_1[i] = EBmixtureObj.get_N_1();
+                	avg_n[i] = EBmixtureObj.get_avg_n();
+                	cvg_wga[i] = n_ipd_wga;
+                	n_iter[i] = EBmixtureObj.get_n_iter();
+                	mu_d[i] = EBmixtureObj.get_mu_d();
+                	mu_1[i] = EBmixtureObj.get_mu_1();
+
+		}
 	}	
 	Rprintf("processed %d sites\n", len);
 
@@ -350,8 +382,43 @@ RcppExport SEXP R_API_detectModProp_EB(SEXP R_IPD_native, SEXP R_idx_native, SEX
 	rl["avg_n"] = avg_n;
 	rl["cvg_wga"] = cvg_wga;
 	rl["n_iter"] = n_iter;
+	rl["mu_d"] = mu_d;
+	rl["mu_1"] = mu_1;
 	return Rcpp::wrap(rl);
 }
+
+RcppExport SEXP R_API_EBmixture_EM(SEXP R_IPD, SEXP R_idx, SEXP R_mu_0, SEXP R_sigma_0,
+                SEXP R_f1_x, SEXP R_f1_y, SEXP R_max_iter)
+{
+        double * IPD = REAL(R_IPD);
+        int len_IPD = Rf_length(R_IPD);
+        double * idx = REAL(R_idx);
+        int len_idx = Rf_length(R_idx);
+
+        double mu_0 = REAL(R_mu_0)[0];
+        double sigma_0 = REAL(R_sigma_0)[0];
+        vector<double> f1_x(REAL(R_f1_x), REAL(R_f1_x) + Rf_length(R_f1_x));
+        vector<double> f1_y(REAL(R_f1_y), REAL(R_f1_y) + Rf_length(R_f1_y));
+        int max_iter = INTEGER(R_max_iter)[0];
+
+        EBmixture_EM EBmixtureObj;
+        EBmixtureObj.setParameters(mu_0, sigma_0, f1_x, f1_y, max_iter);
+        EBmixtureObj.getMoleculeMeanIPD(IPD, idx, len_IPD, len_idx);
+        EBmixtureObj.run(true, 0.2);
+
+        return Rcpp::List::create(Rcpp::Named("ipd_avg")=Rcpp::wrap(EBmixtureObj.get_ipd_avg()),
+                                Rcpp::Named("ipd_n")=Rcpp::wrap(EBmixtureObj.get_ipd_n()),
+                                Rcpp::Named("ipd_var")=Rcpp::wrap(EBmixtureObj.get_ipd_var()),
+                                Rcpp::Named("n_mol")=Rcpp::wrap(EBmixtureObj.get_n_mol()),
+                                Rcpp::Named("prop")=Rcpp::wrap(EBmixtureObj.get_prop_track()),
+                                Rcpp::Named("N_0")=Rcpp::wrap(EBmixtureObj.get_N_0_track()),
+                                Rcpp::Named("N_1")=Rcpp::wrap(EBmixtureObj.get_N_1_track()),
+                                Rcpp::Named("f1_x")=Rcpp::wrap(EBmixtureObj.get_f1_x()),
+                                Rcpp::Named("gamma_0")=Rcpp::wrap(EBmixtureObj.get_gamma_0()),
+                                Rcpp::Named("gamma_1")=Rcpp::wrap(EBmixtureObj.get_gamma_1()) );
+
+}
+
 
 RcppExport SEXP R_API_EBmixture(SEXP R_IPD, SEXP R_idx, SEXP R_mu_0, SEXP R_sigma_0, 
 		SEXP R_f1_x, SEXP R_f1_y, SEXP R_max_iter)

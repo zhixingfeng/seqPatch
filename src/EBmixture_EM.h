@@ -1,5 +1,5 @@
-#ifndef EBMIXTURE_H
-#define EBMIXTURE_H
+#ifndef EBMIXTURE_EM_H
+#define EBMIXTURE_EM_H
 
 #include <stdio.h>
 #include <math.h>
@@ -13,18 +13,12 @@
 #endif
 
 
-struct IPD_data
-{
-	double avg;
-	double var;
-	double n;
-};
 
 
-class EBmixture
+class EBmixture_EM
 {
 	public:
-		EBmixture(){mu_0 = 0; sigma_0 = 1; n_mol = -1; }
+		EBmixture_EM(){mu_0 = 0; sigma_0 = 1; n_mol = -1; }
 		void setParameters(double _mu_0, double _sigma_0, vector<double>  _f1_x, vector<double> _f1_y, int _max_iter)
 		{
 			mu_0 = _mu_0; 
@@ -39,16 +33,14 @@ class EBmixture
 		}
 		void clear()
 		{
-			rho_0.clear(); rho_1.clear();	
 			gamma_0.clear(); gamma_1.clear();
 			N_0.clear(); N_1.clear();
 			prop.clear();
 		}
-		map<string, vector<double> > subsample(double *ipd, double *idx, int len_ipd, int len_idx, double rate);
 		
 		bool getMoleculeMeanIPD(double *ipd, double *idx, int len_ipd, int len_idx);
 		vector<int> bin_search(double query, double *temp, int temp_len);		
-		bool run(bool is_cal_mu_1 = false, bool is_f1_varible = false, double prop_min=0.2);
+		bool run(bool is_cal_mu_1 = true, double prop_min=0.2);
 
 		double get_mu_0(){return mu_0;}
 		double get_sigma_0(){return sigma_0;}
@@ -58,28 +50,26 @@ class EBmixture
 	
 		double f0(double x_avg, double x_var, double x_n);
 		double f0_log(double x_avg, double x_var,  double x_n);
-		double f1(double x);
-		double f1_log(double x);	
+		double f1(double x_avg, double x_var, double x_n, double _mu_1);
+		double f1_log(double x_avg, double x_var, double x_n, double _mu_1);
+		double f1_prior(double x);
+		double f1_prior_log(double x);	
 
 		// get data 
 		vector<double> get_ipd_avg(){ return ipd_avg; }
                 vector<double> get_ipd_n(){ return ipd_n; }
                 vector<double> get_ipd_var() { return ipd_var;}
 	
-		map<int, vector<double> > get_ipd_map() {return ipd_map;}
 		// get result
 		int get_n_mol(){ return n_mol;}
 		double get_avg_n () {return mean(ipd_n);}
 		
-		vector<double> get_rho_0(){return rho_0;}
-		vector<double> get_rho_1(){return rho_1;}
 		vector<double> get_gamma_0(){return gamma_0;}
 		vector<double> get_gamma_1(){return gamma_1;}
 
 		double get_N_0(){return N_0.back();}
 		double get_N_1(){return N_1.back();}	
 		double get_prop(){return prop.back();}
-		vector<double> get_f_mu_1(){return f_mu_1;}
 		
 		double get_mu_1(){return mu_1;}
 		double get_mu_d(){return mu_d;}
@@ -89,15 +79,7 @@ class EBmixture
 		vector<double> get_prop_track(){return prop;}	
 		
 		double get_n_iter(){return (double) prop.size()-1;}
-		// evaluate significance
-		map<string, vector<int> > buildGenomeIndex(string & genomeSeq, int seed_len);
-		vector<int> findMaxContext(int cur_idx, string & genomeSeq, 
-						map<string, vector<int> > &genomeIndex, int left_len, int right_len);
-	public: 
-		double f1_log_int(double x_avg, double x_var,  double x_n);
 		
-	protected:
-		void ipd_sort();
 
 	protected:
 		// parameters
@@ -113,21 +95,16 @@ class EBmixture
 		vector<double> ipd_avg;
 		vector<double> ipd_n;
 		vector<double> ipd_var;
-		
-		map<int, vector<double> > ipd_map;
 
 		// results
 		int n_mol;	 
 		
 		vector<double> prop;
-		vector<double> rho_0;
-		vector<double> rho_1;
 		vector<double> gamma_0;
 		vector<double> gamma_1;
 		vector<double> N_0;
 		vector<double> N_1;
 
-		vector<double> f_mu_1;
 		double mu_1;
 		double mu_d;
 			

@@ -12,6 +12,7 @@
 #include "BayesianMixtureModel.h"
 #include "EBmixture_pooling.h"
 #include "EBmixture.h"
+#include "EBmixture_EM.h"
 
 map<string, vector<double> > hieModelEB(vector<double> & ipd_ref_mean, vector<double> & ipd_ref_var,
                                 vector<double> & ipd_ref_len, int max_iter=10);

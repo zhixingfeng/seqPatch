@@ -134,7 +134,7 @@ sample_subreads <- function(genomeF, rate)
 
 
 
-detectModPropEB <- function(genomeF.native, genomeF.wga, f1.x, f1.y, max.iter = 100)
+detectModPropEB <- function(genomeF.native, genomeF.wga, f1.x, f1.y, is_f1_var=FALSE, max.iter = 100, is.EM=TRUE)
 {
 	if (is.null(genomeF.native$features$moleculeID_pos) | is.null(genomeF.native$features$moleculeID_neg))
 		stop('can not find molecule ID in genomeF.native')
@@ -160,7 +160,7 @@ detectModPropEB <- function(genomeF.native, genomeF.wga, f1.x, f1.y, max.iter = 
 					genomeF.native$features$moleculeID_pos[[i]], ipd.wga, 
 					as.integer(genomeF.native$genome.start.pos[[i]]),
 					as.integer(genomeF.wga$genome.start.pos[[cur.ref]]),
-					as.numeric(f1.x), as.numeric(f1.y), as.integer(max.iter))	
+					as.numeric(f1.x), as.numeric(f1.y), as.integer(is_f1_var), as.integer(max.iter), as.integer(is.EM))	
 			
 	}
 
@@ -175,13 +175,23 @@ detectModPropEB <- function(genomeF.native, genomeF.wga, f1.x, f1.y, max.iter = 
                                         genomeF.native$features$moleculeID_neg[[i]], ipd.wga,
                                         as.integer(genomeF.native$genome.start.neg[[i]]),
                                         as.integer(genomeF.wga$genome.start.neg[[cur.ref]]),
-                                        as.numeric(f1.x), as.numeric(f1.y), as.integer(max.iter))
+                                        as.numeric(f1.x), as.numeric(f1.y),  as.integer(is_f1_var), as.integer(max.iter), as.integer(is.EM))
 
         }	
 
 	rl
 }
 
+EB.mixture.model.EM <- function(IPD, idx, mu.0 = 0, sigma.0 = 1, f1.x, f1.y, max.iter = 100)
+{
+        s <- diff(f1.x)[1]
+        f1.int <- sum(f1.y*s)
+        if (abs(f1.int - 1)>=1e-6) stop('f1 is not a valid density function')
+        if (any(f1.x != sort(f1.x))) stop('f1.x should be sorted')
+
+        .Call('R_API_EBmixture_EM', as.numeric(IPD), as.numeric(idx), as.numeric(mu.0), as.numeric(sigma.0),
+                 as.numeric(f1.x), as.numeric(f1.y), as.integer(max.iter))
+}
 
 
 EB.mixture.model <- function(IPD, idx, mu.0 = 0, sigma.0 = 1, f1.x, f1.y, max.iter = 100)
