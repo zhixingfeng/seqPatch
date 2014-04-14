@@ -143,11 +143,29 @@ bool EBmixture_EM::run(bool is_cal_mu_1, double prop_min)
 		// update gamma_0 and gamma_1
 		for (int i=0; i<n_mol; i++){
 			double cur_f0_log = f0_log(ipd_avg[i], ipd_var[i], ipd_n[i]);	
+			if (ipd_avg[i] <= mu_0 && cur_f0_log <= -12){
+                                gamma_0[i] = 1;
+                                gamma_1[i] = 0;
+                                continue;
+                        }
+                        if (ipd_avg[i] > mu_0 && cur_f0_log <= -12){
+                                gamma_0[i] = 0;
+                                gamma_1[i] = 1;
+                                continue;
+                        }
+
+
 			double lik_r = 0;
 			int cur_len = f1_x.size();
 			for (int j=0; j<cur_len; j++){
-				lik_r +=  s * exp(f1_log(ipd_avg[i], ipd_var[i], ipd_n[i],f1_x[j]) - cur_f0_log + log(f1_y[j]));
+				if (f1_y[j] < 1e-5)
+					continue;
+				double cur_lik_r_log = f1_log(ipd_avg[i], ipd_var[i], ipd_n[i],f1_x[j]) - cur_f0_log;	
+				double cur_f1_y_log = log(f1_y[j]);
+				if (cur_lik_r_log + cur_f1_y_log >= -9.21034)
+					lik_r +=  exp(cur_lik_r_log + cur_f1_y_log);
 			}
+			lik_r *= s;
 			gamma_0[i] = (1 - prop[iter-1]) / ( prop[iter-1]*lik_r + 1 - prop[iter-1] );
 			gamma_1[i] = 1 - gamma_0[i];
 		}		

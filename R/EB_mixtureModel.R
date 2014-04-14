@@ -134,11 +134,12 @@ sample_subreads <- function(genomeF, rate)
 
 
 
-detectModPropEB <- function(genomeF.native, genomeF.wga, f1.x, f1.y, is_f1_var=FALSE, max.iter = 100, is.EM=TRUE)
+detectModPropEB <- function(genomeF.native, genomeF.wga, f1.x = NULL, f1.y = NULL, is_f1_var=FALSE, max.iter = 100, is.EM=FALSE)
 {
 	if (is.null(genomeF.native$features$moleculeID_pos) | is.null(genomeF.native$features$moleculeID_neg))
 		stop('can not find molecule ID in genomeF.native')
-
+	if ((is.null(f1.x) | is.null(f1.y)) & is.EM == FALSE)
+		stop('f1.x and f1.y should not be NULl when is.EM=FALSE')
 	s <- diff(f1.x)[1]
         f1.int <- sum(f1.y*s)
         if (abs(f1.int - 1)>=1e-6) stop('f1 is not a valid density function')
@@ -181,6 +182,13 @@ detectModPropEB <- function(genomeF.native, genomeF.wga, f1.x, f1.y, is_f1_var=F
 
 	rl
 }
+
+EB.mixture.model.EM.naive <- function(IPD, idx, mu.0 = 0, sigma.0 = 1, max.iter = 100)
+{
+
+        .Call('R_API_EBmixture_EM_naive', as.numeric(IPD), as.numeric(idx), as.numeric(mu.0), as.numeric(sigma.0), as.integer(max.iter))
+}
+
 
 EB.mixture.model.EM <- function(IPD, idx, mu.0 = 0, sigma.0 = 1, f1.x, f1.y, max.iter = 100)
 {

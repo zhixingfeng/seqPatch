@@ -198,9 +198,18 @@ bool EBmixture::run(bool is_cal_mu_1, bool is_f1_varible, double prop_min)
 		for (int i = 0;i < n_mol; i++){
 			double f0_log_z = f0_log(ipd_avg[i], ipd_var[i], ipd_n[i]);
                 	double f1_log_z = f1_log_int(ipd_avg[i], ipd_var[i], ipd_n[i]);
-			//double f1_log_z = f1_log_z_all[i];
+			/*if (ipd_avg[i] <= mu_0 && (f1_log_z <= -12 || f0_log_z <= -12)){
+				gamma_0[i] = 1;
+				gamma_1[i] = 0;
+				continue;
+			}	
+			if (ipd_avg[i] > mu_0 && f0_log_z <= -12){
+                                gamma_0[i] = 0;
+                                gamma_1[i] = 1;
+				continue;
+                        }*/
+		
 			double gamma_0_core = f1_log_z + digamma(N_1[iter-1] + 1) - f0_log_z - digamma(N_0[iter-1] + 1);
-			//Rprintf("(%.4lf,%.4lf,%.4lf,%.4lf) ",f0_log_z, f1_log_z, f1_log_z/ipd_n[i], gamma_0_core);
 			gamma_0[i] = 1 / (1 + exp(gamma_0_core)) ;
 	                if (gamma_0_core <= -12)
 				gamma_0[i] = 1;

@@ -1,6 +1,8 @@
 detectModPropEB.iter <- function(genomeF.native, genomeF.wga, f1.x, f1.y, is_f1_var=FALSE, max.iter = 100, is.EM=TRUE, d.eps=0.05, n.round=20)
 {
 
+	if (n.round < 2)
+		stop('n.round should be >= 2')
 	d.median <- numeric()
 	for (i in 1:n.round){
 		cat('iter ',i,':\n', sep='')
