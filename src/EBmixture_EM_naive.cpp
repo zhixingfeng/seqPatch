@@ -69,6 +69,58 @@ double EBmixture_EM_naive::f1_log(double x_avg, double x_var, double x_n)
         return -( x_n* ( (x_avg - mu_1)*(x_avg - mu_1) + x_var) ) / (2.0*sigma_1*sigma_1) - x_n*log(2.0*my_pi) / 2.0 - x_n*log(sigma_1);
 }
 
+bool EBmixture_EM_naive::run_reinit()
+{
+	// set initial values of mu_1
+	double mu_1_init_c[] = {0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2, 2.25, 2.5, 2.75, 3};
+	vector<double> mu_1_init(mu_1_init_c, mu_1_init_c + sizeof(mu_1_init_c) / sizeof(double));
+	
+	//printf("try initial values of mu_1: ");
+	for (int i=0; i<(int)mu_1_init.size(); i++){
+		mu_1_init[i] += mu_0;
+	//	printf("%.2lf, ", mu_1_init[i]);
+	}
+	//printf("\n");
+	
+	// clear existing results
+	log_likely_1_all.clear();
+	BIC_1_all.clear();
+	AIC_1_all.clear();	
+
+	// try different initial value of mu_1 to fit the model
+	for (int i=0; i<(int)mu_1_init.size(); i++){
+		mu_1 = mu_1_init[i];
+		this->run();
+		log_likely_1_all.push_back(this->get_log_likely_1());
+		BIC_1_all.push_back(this->get_BIC_1());
+		AIC_1_all.push_back(this->get_AIC_1());
+		mu_1_all.push_back(this->get_mu_1());
+		prop_all.push_back(this->get_prop());
+		N_0_all.push_back(this->get_N_0());
+		N_1_all.push_back(this->get_N_1());
+	}
+	
+	// find max log_likely_1
+	double log_likely_1_max = log_likely_1_all[0];		
+	int idx_max = 0;
+	for (int i=1; i<(int)mu_1_init.size(); i++){
+		//printf("likelihood: %.2lf -> %lf\n", mu_1_init[i], log_likely_1_all[i]);
+		if (log_likely_1_all[i] > log_likely_1_max){
+			log_likely_1_max = log_likely_1_all[i];
+			idx_max = i;
+		}
+	}		
+	
+	log_likely_1 = log_likely_1_all[idx_max];
+	BIC_1 = BIC_1_all[idx_max];	
+	AIC_1 = AIC_1_all[idx_max];
+	mu_1 = mu_1_all[idx_max];
+	prop[prop.size()-1] = prop_all[idx_max];
+	N_0[N_0.size()-1] = N_0_all[idx_max];
+	N_1[N_1.size()-1] = N_1_all[idx_max];
+	
+	return true;	
+}
 
 bool EBmixture_EM_naive::run()
 {
@@ -85,7 +137,7 @@ bool EBmixture_EM_naive::run()
 
 	
 	// iterate
-	double eps = 1e-3;	
+	double eps = 1e-4;	
 	iter = 1;
 	while (iter <= max_iter){
 		// update mu_1
@@ -95,8 +147,9 @@ bool EBmixture_EM_naive::run()
 			double cur_coef = gamma_1[i] * ipd_n[i];
 			numerator += cur_coef * ipd_avg[i];
 			denominator += cur_coef;
-		} 
-		mu_1 = numerator / denominator;
+		}
+		if (iter > 1) 
+			mu_1 = numerator / denominator;
 
 		// update gamma_0 and gamma_1
 		for (int i=0; i<n_mol; i++){

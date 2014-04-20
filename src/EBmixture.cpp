@@ -188,7 +188,7 @@ bool EBmixture::run(bool is_cal_mu_1, bool is_f1_varible, double prop_min)
 	
 	int s_len = f_mu_1.size();
 	// iterate
-	double eps = 1e-3;	
+	double eps = 1e-4;	
 	iter = 1;
 	while (iter <= max_iter){
 		// update I

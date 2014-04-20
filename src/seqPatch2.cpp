@@ -369,7 +369,8 @@ RcppExport SEXP R_API_detectModProp_EB(SEXP R_IPD_native, SEXP R_idx_native, SEX
 			EBmixture_EM_naive EBmixtureObj;
                         EBmixtureObj.setParameters(mu_0, sigma_0, max_iter);
                         EBmixtureObj.getMoleculeMeanIPD(IPD_native, idx_native, n_IPD_native, n_idx_native);
-                        EBmixtureObj.run();
+                        //EBmixtureObj.run();
+			EBmixtureObj.run_reinit();
 	
 			prop[i] = EBmixtureObj.get_prop();
                 	n_mol[i] = EBmixtureObj.get_n_mol();
@@ -423,8 +424,8 @@ RcppExport SEXP R_API_EBmixture_EM_naive(SEXP R_IPD, SEXP R_idx, SEXP R_mu_0, SE
         EBmixture_EM_naive EBmixtureObj;
         EBmixtureObj.setParameters(mu_0, sigma_0, max_iter);
         EBmixtureObj.getMoleculeMeanIPD(IPD, idx, len_IPD, len_idx);
-        EBmixtureObj.run();
-
+        //EBmixtureObj.run();
+	EBmixtureObj.run_reinit();
         return Rcpp::List::create(Rcpp::Named("ipd_avg")=Rcpp::wrap(EBmixtureObj.get_ipd_avg()),
                                 Rcpp::Named("ipd_n")=Rcpp::wrap(EBmixtureObj.get_ipd_n()),
                                 Rcpp::Named("ipd_var")=Rcpp::wrap(EBmixtureObj.get_ipd_var()),

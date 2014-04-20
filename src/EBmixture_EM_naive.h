@@ -25,6 +25,8 @@ class EBmixture_EM_naive
 			sigma_0 = _sigma_0;
 			sigma_1 = _sigma_0;
 			max_iter = _max_iter;
+				
+			mu_1 = _mu_0;
 		}
 		void clear()
 		{
@@ -35,7 +37,7 @@ class EBmixture_EM_naive
 		
 		bool getMoleculeMeanIPD(double *ipd, double *idx, int len_ipd, int len_idx);
 		bool run();
-
+		bool run_reinit();
 		double get_mu_0(){return mu_0;}
 		double get_sigma_0(){return sigma_0;}
 
@@ -110,6 +112,15 @@ class EBmixture_EM_naive
 		double AIC_0;
 		double AIC_1;
 		int iter;
+
+		vector<double> log_likely_1_all;
+		vector<double> BIC_1_all;
+		vector<double> AIC_1_all;
+			
+		vector<double> mu_1_all;
+		vector<double> prop_all;
+		vector<double> N_0_all;
+		vector<double> N_1_all;
 };
 
 
