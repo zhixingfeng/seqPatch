@@ -339,9 +339,11 @@ RcppExport SEXP R_API_detectModProp_EB(SEXP R_IPD_native, SEXP R_idx_native, SEX
 
 		double mu_0;
 		double sigma_0;
-		if (n_ipd_wga < 2){
+		if (n_ipd_wga <= 2){
 			mu_0 = sqrt(-1);
 			sigma_0 = sqrt(-1);	
+			cvg_wga[i] = n_ipd_wga;
+			continue;
 		}else{
 			mu_0 = mean_c(ipd_wga, n_ipd_wga);
 			sigma_0 = sqrt((n_ipd_wga - 1)*var_c(ipd_wga, n_ipd_wga)/n_ipd_wga);
