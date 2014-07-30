@@ -173,7 +173,7 @@ RcppExport SEXP getFeaturesAlongGenome(SEXP RalnsF, SEXP RalnsIdx, SEXP RalnsFNa
 	int cur_idx = 0;
 	for (int i=0;i<nRead;i++){
 		if ((i+1)%1000==0)
-			Rprintf("processed %d reads\r",i+1);
+			Rprintf("processed %d subreads\r",i+1);
 		if (strand[i]==0){
 			cur_pos = tStart[i];	
 		}else{
@@ -182,70 +182,129 @@ RcppExport SEXP getFeaturesAlongGenome(SEXP RalnsF, SEXP RalnsIdx, SEXP RalnsFNa
 		string refSeq = CHAR(STRING_ELT(RrefSeq,i));
 		SEXP read_data = VECTOR_ELT(RalnsF,i);
 		double *IPD = REAL(VECTOR_ELT(read_data,alnsF_colIdx[0]));
-		//double *PW = REAL(VECTOR_ELT(read_data,alnsF_colIdx[1]));
 		SEXP R_read = VECTOR_ELT(read_data,alnsF_colIdx[2]);
 		SEXP R_ref = VECTOR_ELT(read_data,alnsF_colIdx[3]);
+		
 		int read_len = Rf_length(VECTOR_ELT(read_data,0));
 		int temp_len = 0;
 		int signal_len = 0;
 		for (int j=0;j<read_len;j++){
 			string read = CHAR(STRING_ELT(R_read,j));
 			string ref = CHAR(STRING_ELT(R_ref,j));
-			if (ref!="-")
+	
+			string read_pre = "";
+			string ref_pre = "";	
+			if (j>=1){
+                                read_pre = CHAR(STRING_ELT(R_read,j-1));
+                                ref_pre = CHAR(STRING_ELT(R_ref,j-1));
+                        }
+	
+			// scan homopolymer
+			bool is_rm = false; 
+			string read_k = read;
+			string ref_k = ref;
+			int k = 0;
+			
+			while ( (read == read_k || ref == ref_k) && j + k < read_len ){
+				if (ref_k != "-") temp_len++;
+				
+				if (read_k=="-" || ref_k=="-" || read_k!=ref_k)
+                                                is_rm = true;						
+				k++;
+				if (j + k >= read_len) break;
+				read_k = CHAR(STRING_ELT(R_read,j + k));
+                                ref_k = CHAR(STRING_ELT(R_ref,j + k));
+			}
+			int j_last = j;
+			if (k >= 1)
+				j = j + k - 1;
+			
+			if (is_rm == true) continue;
+			//Rprintf("%d: %d - %d at %d\n",i+1, j_last+1, j+1, temp_len);	
+			// record data	
+			for (int k=j_last; k<=j; k++){
+                                if (k == j_last && (read_pre == "-" || ref_pre == "-" || ref_pre != read_pre))
+					continue;
+				int shift = k - j;
+                                if (strand[i]==0){
+                                        cur_idx = cur_pos + temp_len - 1 - genome_start_pos[refSeq] + shift;
+                                        ipdByGenome_pos[refSeq][cur_idx].IPD.push_back(IPD[k]);
+                                        if (useCCS!=0)
+                                                ipdByGenome_pos[refSeq][cur_idx].moleculeID.push_back(moleculeID[i]);
+
+                                }else{
+                                        cur_idx = cur_pos - temp_len + 1 - genome_start_neg[refSeq] - shift;
+                                        ipdByGenome_neg[refSeq][cur_idx].IPD.push_back(IPD[k]);
+                                        if (useCCS!=0)
+                                                ipdByGenome_neg[refSeq][cur_idx].moleculeID.push_back(moleculeID[i]);
+                                }
+                                signal_len++;
+                        }
+				
+			/*if (ref!="-")
 				temp_len++;
+			
 			// remove the data besides indels and mismatachs 
 			if (j>=1){
-				string read_pre = CHAR(STRING_ELT(R_read,j-1));
+                                string read_pre = CHAR(STRING_ELT(R_read,j-1));
                                 string ref_pre = CHAR(STRING_ELT(R_ref,j-1));
-                                if (read=="-"||ref=="-"||read_pre=="-"||ref_pre=="-"||read!=ref)
-                                	continue;
-			}
-			/*if (j==0){
-				string read_next = CHAR(STRING_ELT(R_read,j+1));
-				string ref_next = CHAR(STRING_ELT(R_ref,j+1));
-				if (read=="-"||ref=="-"||read_next=="-"||ref_next=="-")
-					continue;
-			}else{
-				if (j==read_len-1){
-					string read_pre = CHAR(STRING_ELT(R_read,j-1));
-                               		string ref_pre = CHAR(STRING_ELT(R_ref,j-1));
-					if (read=="-"||ref=="-"||read_pre=="-"||ref_pre=="-")
-                                       		continue;
-				}else{
-					string read_next = CHAR(STRING_ELT(R_read,j+1));
-                               		string ref_next = CHAR(STRING_ELT(R_ref,j+1));
-					string read_pre = CHAR(STRING_ELT(R_read,j-1));
-                                       	string ref_pre = CHAR(STRING_ELT(R_ref,j-1));
-					if (read=="-"||ref=="-"||read_next=="-"||ref_next=="-"||read_pre=="-"||ref_pre=="-")
-                                       		continue;
-				}
-			}*/
+                                if (read=="-" || ref=="-" || read_pre=="-" || ref_pre=="-" || read!=ref || read_pre!=ref_pre)
+                                        continue;
+                        }
+
+			
 			// remove IPD or PW equals NAN ( at start of a read)
-			//if (IPD[j]!=IPD[j] || PW[j]!=PW[j])
 			if (IPD[j]!=IPD[j]) continue;
-			// record data
-			if (strand[i]==0){
-				cur_idx = cur_pos + temp_len - 1 - genome_start_pos[refSeq];
-				ipdByGenome_pos[refSeq][cur_idx].IPD.push_back(IPD[j]);
-        	                //ipdByGenome_pos[refSeq][cur_idx].PW.push_back(PW[j]);
-				if (useCCS!=0) ipdByGenome_pos[refSeq][cur_idx].moleculeID.push_back(moleculeID[i]);
-	
-			}else{
-				cur_idx = cur_pos - temp_len + 1 - genome_start_neg[refSeq];
-				ipdByGenome_neg[refSeq][cur_idx].IPD.push_back(IPD[j]);
-                                //ipdByGenome_neg[refSeq][cur_idx].PW.push_back(PW[j]);
-				if (useCCS!=0) ipdByGenome_neg[refSeq][cur_idx].moleculeID.push_back(moleculeID[i]);	
+			
+			// remove IPD in homopolymer regions with error			
+			int k = 1;
+			int j_last = j;	
+			bool is_rm = false;
+			if (j < read_len-1){
+				string read_k = CHAR(STRING_ELT(R_read,j+k));
+				string ref_k = CHAR(STRING_ELT(R_ref,j+k));
+				while ((ref == ref_k || ref_k=="-") && j + k <= read_len-1){
+					read_k = CHAR(STRING_ELT(R_read,j+k));
+					ref_k = CHAR(STRING_ELT(R_ref,j+k));
+					if (ref_k!="-")
+                                		temp_len++;	
+					if (read_k=="-" || ref_k=="-" || read_k!=ref_k)
+						is_rm = true;
+					k++;
+				}
+				j = j + k -1;
 			}
-			signal_len++;
+			if (is_rm == true)
+				continue;
+			
+			// record data
+			for (int k=j_last; k<=j; k++){
+				int shift = k - j;
+				if (strand[i]==0){
+					cur_idx = cur_pos + temp_len - 1 - genome_start_pos[refSeq] + shift;
+					ipdByGenome_pos[refSeq][cur_idx].IPD.push_back(IPD[k]);
+					if (useCCS!=0) 
+						ipdByGenome_pos[refSeq][cur_idx].moleculeID.push_back(moleculeID[i]);
+	
+				}else{
+					cur_idx = cur_pos - temp_len + 1 - genome_start_neg[refSeq] - shift;
+					ipdByGenome_neg[refSeq][cur_idx].IPD.push_back(IPD[k]);
+					if (useCCS!=0) 
+						ipdByGenome_neg[refSeq][cur_idx].moleculeID.push_back(moleculeID[i]);	
+				}
+				signal_len++;
+			}*/
 		}
 	}	
-	Rprintf("processed %d reads\n",nRead);
+	Rprintf("processed %d subreads\n",nRead);
+
 	/*------------return results--------------*/	
 	Rprintf("output result\n");
         map<string, map<string, vector<vector<double> > > > result_final;
 
 	map<string, vector<vector<double> > > result_pos_moleculeID;
 	map<string, vector<vector<double> > > result_neg_moleculeID;
+
         // postive ipd
         map<string, vector<DataPos> >::iterator it;
         map<string, vector<vector<double> > > result_pos_ipd;
@@ -277,27 +336,6 @@ RcppExport SEXP getFeaturesAlongGenome(SEXP RalnsF, SEXP RalnsIdx, SEXP RalnsFNa
 		result_neg_moleculeID[chr] = tmp_moleculeID;
         }
 
-        // positive pw
-        /*map<string, vector<vector<double> > > result_pos_pw;
-        for (it=ipdByGenome_pos.begin();it!=ipdByGenome_pos.end();it++){
-                vector<vector<double> >tmp;
-                string chr = it->first;
-                for (unsigned int i=0;i<it->second.size();i++){
-                        tmp.push_back(it->second[i].PW);
-                }
-                result_pos_pw[chr] = tmp ;
-        }*/
-
-        // negative pw
-        /*map<string, vector<vector<double> > > result_neg_pw;
-        for (it=ipdByGenome_neg.begin();it!=ipdByGenome_neg.end();it++){
-                vector<vector<double> >tmp;
-                string chr = it->first;
-                for (unsigned int i=0;i<it->second.size();i++){
-                        tmp.push_back(it->second[i].PW);
-                }
-                result_neg_pw[chr] = tmp ;
-        }*/
 
 	if (useCCS==TRUE){
 		result_final["moleculeID_pos"] = result_pos_moleculeID;
