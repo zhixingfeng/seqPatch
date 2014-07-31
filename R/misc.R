@@ -341,11 +341,24 @@ filter.outlier <- function(x, k=3.5, tail='right')
 		stop('tail should be \'right\', \'left\' or \'both\'')
 	.Call('filter_outlier_wrap',as.numeric(x), as.numeric(k), tail)
 }
-
-filter.outlier.byGenomeF <- function(ipd)
+filter.outlier.byGenomeF <- function(genomeF)
 {
-	.Call('filter_outlier_by_genomeF',ipd)
+	# forward strand 
+	cat('Filtering...\n')
+	for (i in 1:length(genomeF$features$ipd_pos)){
+		cat('Forward strand: ', names(genomeF$features$ipd_pos[i]),'\n', sep='')
+		genomeF$features$ipd_pos[[i]] <- .Call('filter_outlier_by_genomeF',genomeF$features$ipd_pos[[i]])
+	}
+	for (i in 1:length(genomeF$features$ipd_neg)){
+                cat('Forward strand: ', names(genomeF$features$ipd_neg[i]),'\n', sep='')
+                genomeF$features$ipd_neg[[i]] <- .Call('filter_outlier_by_genomeF',genomeF$features$ipd_neg[[i]])
+        }
+	genomeF
 }
+#filter.outlier.byGenomeF <- function(ipd)
+#{
+#	.Call('filter_outlier_by_genomeF',ipd)
+#}
 
 logTransGenomeF <- function(genomeF)
 {

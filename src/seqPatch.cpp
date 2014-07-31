@@ -243,59 +243,6 @@ RcppExport SEXP getFeaturesAlongGenome(SEXP RalnsF, SEXP RalnsIdx, SEXP RalnsFNa
                                 signal_len++;
                         }
 				
-			/*if (ref!="-")
-				temp_len++;
-			
-			// remove the data besides indels and mismatachs 
-			if (j>=1){
-                                string read_pre = CHAR(STRING_ELT(R_read,j-1));
-                                string ref_pre = CHAR(STRING_ELT(R_ref,j-1));
-                                if (read=="-" || ref=="-" || read_pre=="-" || ref_pre=="-" || read!=ref || read_pre!=ref_pre)
-                                        continue;
-                        }
-
-			
-			// remove IPD or PW equals NAN ( at start of a read)
-			if (IPD[j]!=IPD[j]) continue;
-			
-			// remove IPD in homopolymer regions with error			
-			int k = 1;
-			int j_last = j;	
-			bool is_rm = false;
-			if (j < read_len-1){
-				string read_k = CHAR(STRING_ELT(R_read,j+k));
-				string ref_k = CHAR(STRING_ELT(R_ref,j+k));
-				while ((ref == ref_k || ref_k=="-") && j + k <= read_len-1){
-					read_k = CHAR(STRING_ELT(R_read,j+k));
-					ref_k = CHAR(STRING_ELT(R_ref,j+k));
-					if (ref_k!="-")
-                                		temp_len++;	
-					if (read_k=="-" || ref_k=="-" || read_k!=ref_k)
-						is_rm = true;
-					k++;
-				}
-				j = j + k -1;
-			}
-			if (is_rm == true)
-				continue;
-			
-			// record data
-			for (int k=j_last; k<=j; k++){
-				int shift = k - j;
-				if (strand[i]==0){
-					cur_idx = cur_pos + temp_len - 1 - genome_start_pos[refSeq] + shift;
-					ipdByGenome_pos[refSeq][cur_idx].IPD.push_back(IPD[k]);
-					if (useCCS!=0) 
-						ipdByGenome_pos[refSeq][cur_idx].moleculeID.push_back(moleculeID[i]);
-	
-				}else{
-					cur_idx = cur_pos - temp_len + 1 - genome_start_neg[refSeq] - shift;
-					ipdByGenome_neg[refSeq][cur_idx].IPD.push_back(IPD[k]);
-					if (useCCS!=0) 
-						ipdByGenome_neg[refSeq][cur_idx].moleculeID.push_back(moleculeID[i]);	
-				}
-				signal_len++;
-			}*/
 		}
 	}	
 	Rprintf("processed %d subreads\n",nRead);
