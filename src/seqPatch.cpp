@@ -225,6 +225,8 @@ RcppExport SEXP getFeaturesAlongGenome(SEXP RalnsF, SEXP RalnsIdx, SEXP RalnsFNa
 			for (int k=j_last; k<=j; k++){
                                 if (k == j_last && (read_pre == "-" || ref_pre == "-" || ref_pre != read_pre))
 					continue;
+				if (IPD[k] != IPD[k])
+					continue;
 				int shift = k - j;
                                 if (strand[i]==0){
                                         cur_idx = cur_pos + temp_len - 1 - genome_start_pos[refSeq] + shift;
